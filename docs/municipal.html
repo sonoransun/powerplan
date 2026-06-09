@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PowerPlan — Municipal</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/site.css">
+<script>const t=localStorage.getItem("pp-theme");if(t)document.documentElement.dataset.theme=t;</script>
+<style>
+/* ── municipal page layout ─────────────────────────────────────────── */
+.profile-line { margin: 20px 2px 4px; font-size: 14px; }
+.src-line { margin: 0 2px 14px; font-size: 12px; color: var(--ink-mid); }
+
+.ctrl-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 22px;
+  align-items: flex-end;
+  padding: 6px 0 8px;
+}
+.fieldish { font-size: 12px; color: var(--ink-mid); }
+.fieldish > span { display: block; margin-bottom: 5px; font-weight: 500; }
+.fieldish select { width: 250px; }
+.chip-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.ctrl-run {
+  margin-left: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+}
+#run-note {
+  font-size: 11.5px;
+  color: var(--ink-mid);
+  text-align: right;
+  max-width: 240px;
+}
+
+.preset-card .card-sub {
+  font-size: 11.5px;
+  color: var(--ink-mid);
+  margin-top: 3px;
+  line-height: 1.45;
+}
+
+.emis-badge {
+  font-size: 11px;
+  padding: 1px 8px;
+  border: 1px solid var(--panel-edge);
+  border-radius: 99px;
+  color: var(--ok);
+  white-space: nowrap;
+}
+.emis-badge.up { color: var(--danger); }
+
+/* ── year inspector drawer ─────────────────────────────────────────── */
+.year-drawer {
+  position: fixed;
+  top: 64px; right: 16px; bottom: 16px;
+  width: 372px;
+  max-width: calc(100vw - 32px);
+  z-index: 80;
+  overflow-y: auto;
+  visibility: hidden;
+  transform: translateX(calc(100% + 24px));
+  transition: transform 240ms cubic-bezier(0.2, 0.6, 0.2, 1), visibility 0s 240ms;
+}
+.year-drawer.open { visibility: visible; transform: none; transition: transform 240ms cubic-bezier(0.2, 0.6, 0.2, 1), visibility 0s; }
+.year-drawer .drawer-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.year-drawer h2 {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 500;
+  margin: 2px 0 0;
+}
+.drawer-close {
+  border: 1px solid var(--panel-edge);
+  background: var(--panel);
+  color: var(--ink-mid);
+  border-radius: var(--radius);
+  width: 26px; height: 26px;
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  flex: none;
+}
+.drawer-close:hover { color: var(--ink); border-color: var(--ink-faint); }
+.year-drawer .fig-caption { border-top: 0; padding: 2px 0 0; }
+.year-drawer .kicker { margin-top: 12px; display: block; }
+.year-drawer table.data td:first-child { white-space: normal; color: var(--ink-mid); }
+
+/* ── status chip extras ────────────────────────────────────────────── */
+#sim-status .bar > i.indet { width: 40%; animation: pp-indet 1.1s linear infinite; }
+@keyframes pp-indet { from { margin-left: -40%; } to { margin-left: 100%; } }
+#sim-cancel { padding: 3px 9px; font-size: 11.5px; }
+
+@media (max-width: 720px) {
+  .ctrl-run { margin-left: 0; align-items: flex-start; }
+  #run-note { text-align: left; }
+}
+</style>
+</head>
+<body>
+<main class="page">
+
+  <div class="page-title-row">
+    <h1>Municipal growth projections</h1>
+    <span class="muted">fossil-to-renewable transition plans, 2025 → 2050 · cost curves, capacity build-out, emissions</span>
+  </div>
+
+  <!-- ── profile cards ─────────────────────────────────────────────── -->
+  <section class="panel reveal" id="profiles-panel">
+    <div class="panel-head">
+      <span class="kicker">Municipal profiles</span>
+      <span class="muted small">select an archetype — five pre-baked plans</span>
+    </div>
+    <div class="panel-body">
+      <div class="card-strip" id="profile-cards">
+        <div class="skeleton" style="min-height:108px"></div>
+        <div class="skeleton" style="min-height:108px"></div>
+        <div class="skeleton" style="min-height:108px"></div>
+        <div class="skeleton" style="min-height:108px"></div>
+        <div class="skeleton" style="min-height:108px"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── controls ──────────────────────────────────────────────────── -->
+  <section class="panel reveal" id="controls-panel" style="--rule:#0984E3">
+    <div class="panel-head">
+      <span class="kicker">Projection controls</span>
+      <span class="muted small" id="wasm-note"></span>
+    </div>
+    <div class="panel-body">
+      <div class="ctrl-row">
+        <label class="field" style="margin:0">
+          <span>Climate override</span>
+          <select id="climate-sel" style="width:250px">
+            <option value="" selected>profile default</option>
+            <option value="hot_arid">Hot Arid (Phoenix/Las Vegas)</option>
+            <option value="hot_humid">Hot Humid (Houston/Miami)</option>
+            <option value="temperate">Temperate (Denver/Austin)</option>
+            <option value="cold_continental">Cold Continental (Minneapolis/Chicago)</option>
+            <option value="marine_mild">Marine Mild (Seattle/Portland)</option>
+            <option value="industrial_north">Industrial North (Cleveland/Detroit)</option>
+          </select>
+        </label>
+        <div class="fieldish">
+          <span>Plan years (offset from base)</span>
+          <div class="chip-row" id="year-chips"></div>
+        </div>
+        <div class="fieldish">
+          <span>Fidelity</span>
+          <div class="seg" id="fid-seg">
+            <button type="button" data-fid="fast" title="720 h simulated per plan year — quick">fast (30-day)</button>
+            <button type="button" data-fid="full" class="on" title="8,760 h simulated per plan year — slower; matches the pre-baked docs">full-year</button>
+          </div>
+        </div>
+        <div class="ctrl-run">
+          <button class="btn primary" id="run-btn" disabled>▶ Project live</button>
+          <div id="run-note"></div>
+        </div>
+      </div>
+    </div>
+    <div class="fig-caption">
+      Defaults (all six plan years, profile climate, full-year fidelity) reproduce the pre-baked
+      projection instantly. Any deviation requires a live in-browser run of the dispatch engine.
+    </div>
+  </section>
+
+  <div id="error-box"></div>
+
+  <!-- ── selected profile header ───────────────────────────────────── -->
+  <div class="profile-line" id="profile-header"></div>
+  <div class="src-line num" id="run-source"></div>
+
+  <!-- ── loading skeleton ──────────────────────────────────────────── -->
+  <div class="grid" id="charts-skeleton">
+    <div class="col-4 skeleton" style="min-height:352px"></div>
+    <div class="col-4 skeleton" style="min-height:352px"></div>
+    <div class="col-4 skeleton" style="min-height:352px"></div>
+    <div class="col-4 skeleton" style="min-height:352px"></div>
+    <div class="col-4 skeleton" style="min-height:352px"></div>
+    <div class="col-4 skeleton" style="min-height:352px"></div>
+  </div>
+
+  <!-- ── six projection figures ────────────────────────────────────── -->
+  <div class="grid" id="charts-grid" style="display:none">
+
+    <section class="panel reveal col-4" data-rule="charge">
+      <div class="panel-head"><span class="kicker">Capacity evolution</span><span class="muted small num">MW · MWh</span></div>
+      <div class="panel-body"><div class="chart" id="ch-capacity"></div></div>
+      <div class="fig-caption"><span class="fig-no">FIG. 1</span>Installed fossil and renewable capacity
+        (stacked, MW, left) with aggregate storage (MWh, right). The dashed rule interpolates the year
+        renewable capacity first overtakes fossil. <span id="cap-note"></span></div>
+    </section>
+
+    <section class="panel reveal col-4" data-rule="grid_import">
+      <div class="panel-head"><span class="kicker">LCOE trajectory</span><span class="muted small num">$/kWh</span></div>
+      <div class="panel-body"><div class="chart" id="ch-lcoe"></div></div>
+      <div class="fig-caption"><span class="fig-no">FIG. 2</span>Levelized cost of energy per plan year
+        — 20-year horizon, 5% discount rate.<span id="lcoe-note"></span></div>
+    </section>
+
+    <section class="panel reveal col-4" data-rule="generation">
+      <div class="panel-head"><span class="kicker">Renewables vs target</span><span class="muted small num">%</span></div>
+      <div class="panel-body"><div class="chart" id="ch-target"></div></div>
+      <div class="fig-caption"><span class="fig-no">FIG. 3</span>Simulated renewable fraction (solid)
+        against the policy target trajectory (dashed); vertical rules mark the renewable-target and
+        net-zero milestone years.</div>
+    </section>
+
+    <section class="panel reveal col-4" data-rule="discharge">
+      <div class="panel-head"><span class="kicker">Peak demand</span><span class="muted small num">MW</span></div>
+      <div class="panel-body"><div class="chart" id="ch-peak"></div></div>
+      <div class="fig-caption"><span class="fig-no">FIG. 4</span>Planned coincident peak load per plan
+        year, compounding demand growth and electrification.</div>
+    </section>
+
+    <section class="panel reveal col-4" data-rule="hydro">
+      <div class="panel-head"><span class="kicker">Self-sufficiency</span><span class="muted small num">%</span></div>
+      <div class="panel-body"><div class="chart" id="ch-self"></div></div>
+      <div class="fig-caption"><span class="fig-no">FIG. 5</span>Share of demand served by local
+        generation and storage — i.e. without grid imports — from each year's simulated metrics.</div>
+    </section>
+
+    <section class="panel reveal col-4" data-rule="gas">
+      <div class="panel-head"><span class="kicker">Emissions</span><span class="emis-badge num" id="emis-badge" style="display:none"></span></div>
+      <div class="panel-body"><div class="chart" id="ch-emissions"></div></div>
+      <div class="fig-caption"><span class="fig-no">FIG. 6</span>Annual CO₂ emissions attributed to
+        fossil generation; the badge tracks the change from the first plotted year.</div>
+    </section>
+
+  </div>
+
+  <!-- ── year inspector drawer ─────────────────────────────────────── -->
+  <aside class="popover year-drawer" id="year-drawer" aria-hidden="true" aria-label="Year inspector">
+    <div class="drawer-head">
+      <div>
+        <span class="kicker" style="margin-top:0">Year inspector</span>
+        <h2 id="drawer-title"></h2>
+        <div class="muted small" id="drawer-sub"></div>
+      </div>
+      <button class="drawer-close" id="drawer-close" aria-label="Close inspector" title="Close">×</button>
+    </div>
+    <div id="drawer-donut" style="height:170px;margin-top:6px"></div>
+    <div class="fig-caption"><span class="fig-no">FIG. 7</span>Installed capacity split, fossil vs renewable.</div>
+    <span class="kicker">Plan</span>
+    <div class="table-wrap"><table class="data"><tbody id="drawer-plan"></tbody></table></div>
+    <span class="kicker">Simulated metrics</span>
+    <div class="table-wrap"><table class="data"><tbody id="drawer-metrics"></tbody></table></div>
+  </aside>
+
+  <!-- ── engine status chip ────────────────────────────────────────── -->
+  <div class="status-chip fade" id="sim-status" role="status" aria-live="polite">
+    <span class="num" id="sim-status-text">idle</span>
+    <span class="bar"><i id="sim-status-bar"></i></span>
+    <button class="btn" id="sim-cancel" style="display:none" title="Terminate the engine and cancel this run">cancel</button>
+  </div>
+
+</main>
+<script type="module">
+  import { initNav } from "./js/nav.js";
+  initNav("municipal");
+  import("./js/pages/municipal.js").then(m => m.init());
+</script>
+</body>
+</html>

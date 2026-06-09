@@ -2,6 +2,32 @@
 
 Simulates arbitrary configurations of energy sources, storage technologies, and solid-state power controllers from home scale to metropolitan deployments. Includes speculative technologies (micro-fusion, antimatter), real-world municipal infrastructure models with growth projections, programmatic scenario generation, and resilience testing with failure injection.
 
+## Web Demo
+
+The `docs/` directory is a static web frontend (GitHub Pages-ready) that exposes
+every simulator capability in the browser: pre-baked dashboards for all 10 preset
+grids, preset comparison, a live custom-config builder, failure injection with
+resilience metrics, and municipal growth projections. Live runs execute the real
+`powerplan` package in-browser via Pyodide (WebAssembly) — nothing is uploaded.
+
+```bash
+# preview locally (ES modules require http://, not file://)
+python -m http.server 8000 --directory docs
+```
+
+To publish: push to GitHub, then Settings → Pages → deploy from branch
+`main`, folder `/docs`.
+
+All files under `docs/data/` and `docs/py/powerplan-pkg.zip` are **generated** —
+after changing anything in `powerplan/`, regenerate and commit them:
+
+```bash
+python scripts/prebake.py
+```
+
+Output is byte-deterministic: a `git diff` after re-running prebake means a real
+behavioral change in the engine.
+
 ## Features
 
 - **7 energy source models**: Solar PV, Wind, Micro-Hydro, Geothermal, Natural Gas (CCGT/Peaker), Micro-Fusion (D-T/p-B11), Antimatter Reactor (with target atom electron production)

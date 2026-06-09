@@ -1,0 +1,10 @@
+# virtualenv & python cache
+.venv/
+__pycache__/
+*.pyc
+
+# regenerable simulation outputs at the repo root (docs/ images are NOT ignored)
+/*.png
+
+.DS_Store
+.claude/settings.local.json

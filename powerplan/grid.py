@@ -218,8 +218,13 @@ class EnergyDispatcher:
         return result
 
     def simulate(self, hours: int = 8760, dt_hours: float = 1.0,
-                 weather_factors: Optional[np.ndarray] = None) -> list[DispatchResult]:
-        """Run full simulation over specified hours."""
+                 weather_factors: Optional[np.ndarray] = None,
+                 progress_callback=None) -> list[DispatchResult]:
+        """Run full simulation over specified hours.
+
+        progress_callback, if given, is called as f(done_steps, total_steps)
+        every 500 steps and once at the end; it has no effect on results.
+        """
         self.results = []
         n_steps = int(hours / dt_hours)
 
@@ -244,6 +249,8 @@ class EnergyDispatcher:
                 weather_factor=weather_factors[i],
                 temperature_c=temps[i],
             )
+            if progress_callback is not None and ((i + 1) % 500 == 0 or i + 1 == n_steps):
+                progress_callback(i + 1, n_steps)
 
         return self.results
 

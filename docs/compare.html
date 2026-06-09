@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PowerPlan — Compare</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/site.css">
+<script>const t=localStorage.getItem("pp-theme");if(t)document.documentElement.dataset.theme=t;</script>
+<style>
+  /* page-local layout glue only — design tokens live in css/site.css */
+  .chip-row { display: flex; flex-wrap: wrap; gap: 8px; padding: 2px 0 6px; }
+  .head-actions { display: flex; gap: 8px; margin-left: auto; align-items: center; }
+  .head-actions .btn { padding: 4px 10px; font-size: 12px; }
+  #panel-select .panel-head { align-items: center; }
+  #spec-callout { display: flex; align-items: flex-start; gap: 12px; margin: 0; }
+  #spec-callout[hidden] { display: none; }
+  #spec-callout .dismiss {
+    margin-left: auto; border: none; background: none; color: inherit;
+    cursor: pointer; font-size: 14px; line-height: 1; padding: 1px 3px; opacity: 0.65;
+  }
+  #spec-callout .dismiss:hover { opacity: 1; }
+  table.data th[data-col] { user-select: none; }
+  table.data th .sort-ind { margin-left: 4px; color: var(--accent); font-size: 9px; }
+</style>
+</head>
+<body>
+<main class="page">
+  <div class="page-title-row">
+    <h1>Preset comparison</h1>
+    <span class="muted">Ten pre-baked configurations · one 8&thinsp;760&nbsp;h simulation each · all figures react to the selection below</span>
+  </div>
+
+  <div class="grid" id="compare-root">
+
+    <!-- ── selector ─────────────────────────────────────────────── -->
+    <section class="panel reveal col-12" id="panel-select" style="--rule:#0984E3">
+      <div class="panel-head">
+        <span class="kicker">Preset selection</span>
+        <span class="muted" id="sel-count" style="font-size:12px"></span>
+        <div class="head-actions">
+          <button type="button" class="btn" id="btn-conv" disabled>Conventional 5</button>
+          <button type="button" class="btn" id="btn-all" disabled>All 10</button>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="chip-row" id="chip-row">
+          <div class="skeleton" style="min-height:30px;flex:1"></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="callout spec col-12" id="spec-callout" hidden></div>
+
+    <!-- ── radar ────────────────────────────────────────────────── -->
+    <section class="panel reveal col-12" id="panel-radar" style="--rule:#0984E3">
+      <div class="panel-head">
+        <span class="kicker">Normalized profile</span>
+        <span class="muted" style="font-size:12px">5 axes · each scaled to 0–1</span>
+      </div>
+      <div class="panel-body">
+        <div class="chart tall skeleton" id="radar-chart"></div>
+        <div class="empty-state" id="radar-empty" hidden>No presets selected — toggle a chip above to draw the radar.</div>
+      </div>
+      <div class="fig-caption"><span class="fig-no">FIG. 1</span>Five normalized axes, matching the matplotlib comparison figure: self-sufficiency, mean system efficiency, renewable fraction, generation/demand ratio (axis capped at 2× demand: min(x/2,&nbsp;1)) and low curtailment (1&nbsp;−&nbsp;min(x,&nbsp;1)). Hover a polygon for the raw, un-normalized values; † marks speculative configurations.</div>
+    </section>
+
+    <!-- ── bar small-multiples ──────────────────────────────────── -->
+    <section class="panel reveal col-4" id="panel-bar-selfsuff">
+      <div class="panel-head"><span class="kicker">Self-sufficiency</span></div>
+      <div class="panel-body">
+        <div class="chart short skeleton" id="selfsuff-chart"></div>
+        <div class="empty-state" id="selfsuff-empty" hidden>No presets selected.</div>
+      </div>
+      <div class="fig-caption"><span class="fig-no">FIG. 2</span>Share of demand met without grid imports (1&nbsp;−&nbsp;imports/demand). Click a bar to open that preset's dashboard.</div>
+    </section>
+
+    <section class="panel reveal col-4" id="panel-bar-eff">
+      <div class="panel-head"><span class="kicker">System efficiency</span></div>
+      <div class="panel-body">
+        <div class="chart short skeleton" id="eff-chart"></div>
+        <div class="empty-state" id="eff-empty" hidden>No presets selected.</div>
+      </div>
+      <div class="fig-caption"><span class="fig-no">FIG. 3</span>Annual mean conversion efficiency through the power-controller stage. Click a bar to open the preset.</div>
+    </section>
+
+    <section class="panel reveal col-4" id="panel-bar-renew">
+      <div class="panel-head"><span class="kicker">Renewable fraction</span></div>
+      <div class="panel-body">
+        <div class="chart short skeleton" id="renew-chart"></div>
+        <div class="empty-state" id="renew-empty" hidden>No presets selected.</div>
+      </div>
+      <div class="fig-caption"><span class="fig-no">FIG. 4</span>Mean renewable share of delivered energy. Fusion and antimatter count as non-renewable. Click a bar to open the preset.</div>
+    </section>
+
+    <section class="panel reveal col-4" id="panel-bar-lcoe">
+      <div class="panel-head"><span class="kicker">LCOE</span><span class="muted" style="font-size:12px">$/kWh</span></div>
+      <div class="panel-body">
+        <div class="chart short skeleton" id="lcoe-chart"></div>
+        <div class="empty-state" id="lcoe-empty" hidden>No presets selected.</div>
+      </div>
+      <div class="fig-caption"><span class="fig-no">FIG. 5</span>Levelized cost of energy over a 20-year horizon at 5% discount, to 4 decimal places; ∞ where no energy was delivered. Click a bar to open the preset.</div>
+    </section>
+
+    <section class="panel reveal col-4" id="panel-bar-capex">
+      <div class="panel-head">
+        <span class="kicker">Capital cost</span>
+        <div class="seg" id="capex-seg" role="group" aria-label="CAPEX axis scale">
+          <button type="button" data-scale="lin">lin</button>
+          <button type="button" data-scale="log" class="on">log</button>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="chart short skeleton" id="capex-chart"></div>
+        <div class="empty-state" id="capex-empty" hidden>No presets selected.</div>
+      </div>
+      <div class="fig-caption"><span class="fig-no">FIG. 6</span>Total CAPEX across sources, storage and controllers. Log axis by default — the presets span six orders of magnitude (toggle lin/log above). Click a bar to open the preset.</div>
+    </section>
+
+    <section class="panel reveal col-4" id="panel-bar-curtail">
+      <div class="panel-head"><span class="kicker">Curtailment</span></div>
+      <div class="panel-body">
+        <div class="chart short skeleton" id="curtail-chart"></div>
+        <div class="empty-state" id="curtail-empty" hidden>No presets selected.</div>
+      </div>
+      <div class="fig-caption"><span class="fig-no">FIG. 7</span>Share of potential generation discarded when storage is full and grid export is capped. Click a bar to open the preset.</div>
+    </section>
+
+    <!-- ── full metrics table ───────────────────────────────────── -->
+    <section class="panel reveal col-12" id="panel-table">
+      <div class="panel-head">
+        <span class="kicker">Full metrics</span>
+        <div class="head-actions">
+          <button type="button" class="btn" id="btn-csv" disabled title="Download the visible rows as CSV">CSV</button>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="table-wrap" id="table-wrap">
+          <div class="skeleton" style="min-height:280px"></div>
+        </div>
+      </div>
+      <div class="fig-caption"><span class="fig-no">FIG. 8</span>All headline metrics for the selected presets over the 8&thinsp;760&nbsp;h baked run. Click a column header to sort (▲ asc / ▼ desc); CSV exports the visible rows in raw units (kW, kWh, USD, fractions 0–1).</div>
+    </section>
+
+  </div>
+</main>
+<script type="module">
+  import { initNav } from "./js/nav.js";
+  initNav("compare");
+  import("./js/pages/compare.js").then(m => m.init());
+</script>
+</body>
+</html>

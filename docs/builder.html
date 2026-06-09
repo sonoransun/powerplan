@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PowerPlan — Builder</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/site.css">
+<script>const t=localStorage.getItem("pp-theme");if(t)document.documentElement.dataset.theme=t;</script>
+</head>
+<body>
+<main class="page">
+  <div class="page-title-row">
+    <h1>Builder</h1>
+    <span class="muted">compose a grid from the component catalog, then run it in-browser</span>
+    <span style="flex:1"></span>
+    <button class="btn" id="b-share" title="Copy a URL that encodes this configuration">Copy share link</button>
+  </div>
+
+  <div class="builder-layout">
+    <aside class="rail" id="b-rail" aria-label="Configuration rail">
+      <div class="skeleton" style="min-height:120px"></div>
+      <div class="skeleton" style="min-height:90px"></div>
+      <div class="skeleton" style="min-height:160px"></div>
+    </aside>
+
+    <div style="display:flex;flex-direction:column;gap:var(--gap);min-width:0;">
+
+      <section class="panel reveal" id="b-preview-panel">
+        <div class="panel-head">
+          <span class="kicker">System Topology</span>
+          <span id="b-capline" class="num"></span>
+        </div>
+        <div class="panel-body">
+          <div class="sysdiag" id="b-sysdiag"></div>
+        </div>
+        <div class="fig-caption"><span class="fig-no">FIG. 1</span>
+          Live preview of the configured system — sources feed the DC bus through
+          controllers; storage and the grid tie balance the load.</div>
+      </section>
+
+      <section class="panel reveal" id="b-validation-panel">
+        <div class="panel-head"><span class="kicker">Validation</span></div>
+        <div class="panel-body">
+          <ul class="validation" id="b-validation" style="margin:4px 0;padding-left:20px;"></ul>
+        </div>
+      </section>
+
+      <section class="panel reveal" id="b-run-panel" style="--rule:#0984E3">
+        <div class="panel-head"><span class="kicker">Run</span>
+          <span class="muted" id="b-est" style="font-size:11.5px;"></span></div>
+        <div class="panel-body">
+          <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:flex-end;">
+            <label class="field" style="margin:0;">
+              <span>Duration</span>
+              <div class="seg" id="b-duration"></div>
+            </label>
+            <label class="field" style="margin:0;flex:1;min-width:220px;">
+              <span>Grid interconnect <span class="num" id="b-grid-val"></span></span>
+              <input type="range" id="b-grid" min="0" max="1000" step="1">
+            </label>
+            <label class="field" style="margin:0;display:flex;align-items:center;gap:8px;">
+              <input type="checkbox" id="b-island" style="width:auto;">
+              <span style="margin:0;">island mode (no grid)</span>
+            </label>
+          </div>
+          <p class="muted" style="font-size:11.5px;margin:10px 0 12px;">
+            Weather: synthetic, fixed seed 123 — runs are reproducible.</p>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <button class="btn primary" id="b-run" style="min-width:160px;">RUN SIMULATION</button>
+            <div class="progress-line" id="b-progress" style="display:none;flex:1;min-width:200px;">
+              <span id="b-progress-label">Simulating…</span>
+              <div class="bar"><i id="b-progress-bar" style="width:0%"></i></div>
+            </div>
+            <span style="flex:1"></span>
+            <button class="btn" id="b-to-resilience"
+              title="Hand this configuration to the failure-injection lab">Send to Resilience lab →</button>
+          </div>
+          <div id="b-wasm-note"></div>
+        </div>
+      </section>
+
+      <div id="b-error"></div>
+
+      <section id="b-results">
+        <div class="empty-state">
+          <p style="margin:0 0 4px;"><strong>No run yet.</strong></p>
+          <p style="margin:0;">Compose a system on the left, check the validation readout,
+          then <span class="num">RUN SIMULATION</span>. The engine executes in your browser
+          via WebAssembly — first run downloads the runtime (~15&nbsp;MB).</p>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</main>
+
+<div class="status-chip fade" id="b-status" role="status" aria-live="polite">
+  <span id="b-status-text"></span>
+  <div class="bar"><i id="b-status-bar" style="width:0%"></i></div>
+</div>
+
+<script type="module">
+  import { initNav } from "./js/nav.js";
+  initNav("builder");
+  import("./js/pages/builder.js").then(m => m.init());
+</script>
+</body>
+</html>

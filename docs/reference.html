@@ -1,0 +1,910 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PowerPlan — Model</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/site.css">
+<script>const t=localStorage.getItem("pp-theme");if(t)document.documentElement.dataset.theme=t;</script>
+<style>
+  /* page-local layout glue only — design tokens live in css/site.css */
+  .ref-layout { display: grid; grid-template-columns: 188px minmax(0, 1fr); gap: 28px; align-items: start; }
+  .ref-main { min-width: 0; }
+
+  /* sticky in-page TOC (left rail) */
+  .ref-toc { position: sticky; top: 76px; display: flex; flex-direction: column; gap: 2px; padding-top: 4px; }
+  .ref-toc .kicker { margin: 0 0 8px 12px; }
+  .ref-toc a { padding: 5px 10px; border-left: 2px solid var(--hairline); color: var(--ink-mid); font-size: 12.5px; }
+  .ref-toc a:hover { color: var(--ink); text-decoration: none; }
+  .ref-toc a.on { color: var(--ink); border-left-color: var(--accent); background: color-mix(in srgb, var(--accent) 5%, transparent); }
+
+  .ref-section { scroll-margin-top: 72px; }
+  .ref-section + .ref-section { margin-top: 44px; }
+  .ref-section .panel, .ref-section .callout { margin-bottom: var(--gap); }
+  .sec-head { margin: 0 0 14px; max-width: 76ch; }
+  .sec-head h2 { font-size: 16px; margin: 3px 0 4px; }
+  .sec-head p { margin: 0; font-size: 13px; }
+
+  /* speculative lead callout */
+  .callout.spec.lead { padding: 16px 20px; margin-top: 0; }
+  .callout.spec.lead p { margin: 0 0 10px; }
+  .callout.spec.lead p:last-child { margin-bottom: 0; }
+  .callout.spec.lead ul { margin: 0 0 10px; padding-left: 20px; }
+  .callout.spec.lead li { margin: 5px 0; }
+  .callout.spec.lead code { font-family: var(--font-mono); font-size: 0.92em; }
+
+  /* dispatch priority list */
+  ol.steps { list-style: none; margin: 14px 0 2px; padding: 0; counter-reset: step; }
+  ol.steps li { counter-increment: step; position: relative; padding: 9px 0 9px 40px; border-top: 1px dashed var(--hairline); font-size: 13px; }
+  ol.steps li:first-child { border-top: none; }
+  ol.steps li::before {
+    content: counter(step);
+    position: absolute; left: 4px; top: 10px;
+    width: 20px; height: 20px; border-radius: 50%;
+    border: 1.5px solid var(--step-c, var(--ink-faint));
+    color: var(--ink); font: 500 11px/19px var(--font-mono); text-align: center;
+  }
+  ol.steps code, .truths code, .tech-char code { font-family: var(--font-mono); font-size: 0.92em; }
+
+  /* engine truths */
+  dl.truths { margin: 6px 0 4px; }
+  dl.truths dt { font-weight: 600; font-size: 13px; }
+  dl.truths dd { margin: 2px 0 12px; color: var(--ink-mid); font-size: 12.5px; max-width: 86ch; }
+  dl.truths dd:last-child { margin-bottom: 2px; }
+
+  /* dispatch flow strip */
+  #dispatch-fig { margin: 6px 0 4px; }
+  #dispatch-fig svg { width: 100%; max-width: 860px; height: auto; display: block; margin: 0 auto; }
+  #dispatch-fig text { font-family: var(--font-mono); fill: var(--ink); }
+  #dispatch-fig .lbl { font-size: 11.5px; font-weight: 600; letter-spacing: 0.08em; text-anchor: middle; }
+  #dispatch-fig .sub { font-size: 9px; fill: var(--ink-mid); text-anchor: middle; }
+  #dispatch-fig .alab { font-size: 8.5px; fill: var(--ink-mid); }
+  #dispatch-fig rect.nbox { fill: var(--bg); stroke: var(--panel-edge); }
+  #dispatch-fig .bus { stroke: var(--ink); stroke-width: 5; stroke-linecap: round; }
+  #dispatch-fig .flow { fill: none; stroke-width: 2; }
+  #dispatch-fig .stepc circle { fill: var(--panel); stroke: var(--step-c, var(--ink)); stroke-width: 1.2; }
+  #dispatch-fig .stepc text { font-size: 10px; font-weight: 500; text-anchor: middle; }
+  #dispatch-fig .f-generation  { stroke: var(--f-generation,  currentColor); }
+  #dispatch-fig .a-generation  { fill:   var(--f-generation,  currentColor); }
+  #dispatch-fig .f-charge      { stroke: var(--f-charge,      currentColor); }
+  #dispatch-fig .a-charge      { fill:   var(--f-charge,      currentColor); }
+  #dispatch-fig .f-discharge   { stroke: var(--f-discharge,   currentColor); }
+  #dispatch-fig .a-discharge   { fill:   var(--f-discharge,   currentColor); }
+  #dispatch-fig .f-demand      { stroke: var(--f-demand,      currentColor); }
+  #dispatch-fig .a-demand      { fill:   var(--f-demand,      currentColor); }
+  #dispatch-fig .f-grid_import { stroke: var(--f-grid_import, currentColor); }
+  #dispatch-fig .a-grid_import { fill:   var(--f-grid_import, currentColor); }
+  #dispatch-fig .f-grid_export { stroke: var(--f-grid_export, currentColor); }
+  #dispatch-fig .a-grid_export { fill:   var(--f-grid_export, currentColor); }
+  #dispatch-fig .f-curtail     { stroke: var(--f-curtail,     currentColor); }
+  #dispatch-fig .a-curtail     { fill:   var(--f-curtail,     currentColor); }
+
+  /* tech cards */
+  .tech-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(248px, 1fr)); gap: var(--gap); padding: 4px 0 8px; }
+  .tech-card {
+    background: var(--bg);
+    border: 1px solid var(--panel-edge);
+    border-top: 2px solid var(--tech, var(--ink-faint));
+    border-radius: var(--radius);
+    padding: 10px 12px 12px;
+    display: flex; flex-direction: column;
+  }
+  .tech-card header { display: flex; align-items: baseline; gap: 7px; }
+  .tech-card h3 { font-size: 13px; font-weight: 600; }
+  .tech-card .swatch { width: 9px; height: 9px; border-radius: 2px; background: var(--tech, var(--ink-faint)); flex: none; align-self: center; }
+  .tech-card .tkey { margin-left: auto; font: 10px var(--font-mono); color: var(--ink-faint); white-space: nowrap; }
+  .tech-char { margin: 5px 0 9px; font-size: 12px; color: var(--ink-mid); flex: 1; }
+  .tech-params { font: 11px var(--font-mono); }
+  .tech-params .p { display: flex; justify-content: space-between; gap: 10px; padding: 2px 0; border-bottom: 1px dotted var(--hairline); }
+  .tech-params .p span:first-child { color: var(--ink-mid); }
+  .tech-params .p span:last-child { text-align: right; }
+  .tech-cost { margin-top: 9px; font-size: 11px; }
+  .tech-cost::before { content: "CAPEX"; font-size: 9px; font-weight: 600; letter-spacing: 0.12em; color: var(--ink-faint); margin-right: 7px; }
+  .scale-dots { display: flex; gap: 5px; margin-top: 9px; }
+  .sdot {
+    width: 18px; height: 18px; border-radius: 50%;
+    border: 1px solid var(--hairline); color: var(--ink-faint);
+    font: 500 9px/16px var(--font-mono); text-align: center; cursor: help;
+  }
+  .sdot.on {
+    border-color: var(--tech, var(--ink-mid)); color: var(--ink);
+    background: color-mix(in srgb, var(--tech, var(--ink-mid)) 18%, var(--panel));
+  }
+  .pair { margin-top: 9px; font: 10.5px var(--font-mono); color: var(--ink-mid); }
+  .pair::before { content: "▸ "; color: var(--ink-faint); }
+
+  /* glossary tables: definitions wrap, keys don't */
+  table.data td.def { white-space: normal; min-width: 320px; max-width: 62ch; color: var(--ink-mid); }
+  table.data td code { font-family: var(--font-mono); font-size: 11.5px; }
+  table.data td.u { color: var(--ink-mid); font-family: var(--font-mono); font-size: 11px; }
+
+  /* palette legend */
+  .pal-wrap { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--gap); padding: 4px 0 6px; }
+  .pal-group .pal-title { margin-bottom: 6px; }
+  .pal-row { display: flex; align-items: center; gap: 8px; padding: 2.5px 0; font: 11.5px var(--font-mono); }
+  .pal-sw { width: 14px; height: 14px; border-radius: 2px; border: 1px solid var(--hairline); flex: none; }
+  .pal-name { color: var(--ink); }
+  .pal-hex { margin-left: auto; color: var(--ink-faint); }
+
+  /* colophon */
+  .colo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--gap); margin: 4px 0 14px; }
+  .colo-grid .num { font-size: 17px; margin-top: 2px; }
+  .colo-prose p { margin: 0 0 10px; font-size: 13px; max-width: 86ch; }
+  .colo-prose p:last-child { margin-bottom: 2px; }
+  .colo-prose code { font-family: var(--font-mono); font-size: 0.92em; }
+
+  @media (max-width: 980px) {
+    .ref-layout { grid-template-columns: 1fr; gap: var(--gap); }
+    .ref-toc { position: static; flex-direction: row; flex-wrap: wrap; gap: 6px; padding-top: 0; }
+    .ref-toc .kicker { display: none; }
+    .ref-toc a { border: 1px solid var(--panel-edge); border-radius: 99px; padding: 4px 11px; background: var(--panel); }
+    .ref-toc a.on { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 7%, var(--panel)); }
+  }
+</style>
+</head>
+<body>
+<main class="page">
+  <div class="page-title-row">
+    <h1>Model reference</h1>
+    <span class="muted">How the simulator works, what each technology models, and what every number means — the written record behind the figures.</span>
+  </div>
+
+  <div class="ref-layout">
+
+    <nav class="ref-toc" aria-label="On this page">
+      <span class="kicker">On this page</span>
+      <a href="#speculative">1 · Speculative tech</a>
+      <a href="#dispatch">2 · How dispatch works</a>
+      <a href="#technologies">3 · Technology catalog</a>
+      <a href="#metrics">4 · Metrics glossary</a>
+      <a href="#colophon">5 · Colophon</a>
+    </nav>
+
+    <div class="ref-main">
+
+      <!-- ════ §1 SPECULATIVE ═══════════════════════════════════════ -->
+      <section class="ref-section" id="speculative">
+        <header class="sec-head">
+          <span class="kicker">§ 1 · Speculative technology</span>
+          <h2>Read this before trusting any fusion or antimatter number</h2>
+          <p class="muted">Every <span data-spec="compact"></span> chip on this site links here.</p>
+        </header>
+
+        <div class="callout spec lead reveal" role="note">
+          <p><strong>Micro-fusion and antimatter reactors do not exist at the parameters modeled here.</strong>
+          PowerPlan includes them as what-if instruments: the simulator treats them as just another
+          generator subclass, so you can ask “what would a grid look like <em>if</em> a box like this existed” —
+          not “what will a fusion plant cost.” Specifically:</p>
+          <ul>
+            <li><strong>Costs are intentionally optimistic inputs.</strong> Fusion capital cost spans
+              <span class="num">$9k–27k</span><span class="unit">/kW</span> (a $15k/kW first-of-a-kind base with
+              size discounts down to ×0.6 and a ×1.8 premium for the harder p-B11 cycle); antimatter spans
+              <span class="num">$50k–100k</span><span class="unit">/kW</span> (a $100k/kW base, ×0.5 above 20&nbsp;MW).
+              Q-values, conversion efficiencies, maintenance intervals and the antiproton fuel price
+              (implicitly zero) are all parameters to vary, not forecasts.</li>
+            <li><strong>The antimatter “target atom” pathway is author-invented.</strong> Directing antiprotons at
+              xenon, lead, or uranium targets to harvest Auger and ionization electrons on graphene electrodes —
+              including the antimatter-catalyzed-fission amplification factor (<span class="num">×1.107</span> for
+              U-238) and the <code>electron_collection_efficiency</code> of <span class="num">0.45</span> — has no
+              experimental basis. It is a designed mechanism, written to be internally consistent, nothing more.</li>
+            <li><strong><code>q_engineering</code> is reported but unused.</strong> The fusion model accepts and
+              echoes an engineering Q in its summaries, but the power balance is derived only from
+              <code>thermal_efficiency</code> minus a sustainment fraction. Changing Q changes a label, not a result.</li>
+            <li><strong>Renewable accounting:</strong> fusion and antimatter count as <em>non-renewable</em> in
+              every renewable-fraction metric, alongside gas.</li>
+          </ul>
+          <p>Results that lean on these components say more about the assumptions than about the world.
+          The five conventional sources and seven storage technologies use published-engineering parameter
+          ranges and deserve correspondingly more trust.</p>
+        </div>
+      </section>
+
+      <!-- ════ §2 DISPATCH ══════════════════════════════════════════ -->
+      <section class="ref-section" id="dispatch">
+        <header class="sec-head">
+          <span class="kicker">§ 2 · The engine</span>
+          <h2>How dispatch works</h2>
+          <p class="muted">One fixed five-priority pass per timestep — straight-line code in
+            <code>powerplan/grid.py</code>, not a pluggable market model.</p>
+        </header>
+
+        <section class="panel reveal" data-rule="generation">
+          <div class="panel-head">
+            <span class="kicker">Dispatch priority</span>
+            <span class="muted" style="font-size:12px">runs once per simulation tick</span>
+          </div>
+          <div class="panel-body">
+            <div id="dispatch-fig">
+              <svg viewBox="0 0 810 258" role="img" aria-labelledby="dfig-title">
+                <title id="dfig-title">Energy flow: sources through controllers onto a bus feeding storage, load, grid, and curtailment — annotated with the five dispatch steps.</title>
+                <!-- left column -->
+                <rect class="nbox" x="16" y="64" width="140" height="112" rx="2"/>
+                <text class="lbl" x="86" y="104">SOURCES</text>
+                <text class="sub" x="86" y="122">7 generator models</text>
+                <text class="sub" x="86" y="136">non-dispatchable</text>
+
+                <line class="flow f-generation" x1="156" y1="120" x2="240" y2="120"/>
+                <polygon class="a-generation" points="248,120 239,115.5 239,124.5"/>
+                <g class="stepc" data-flow="generation"><circle cx="198" cy="120" r="9.5"/><text x="198" y="123.5">1</text></g>
+
+                <rect class="nbox" x="250" y="64" width="150" height="112" rx="2"/>
+                <text class="lbl" x="325" y="104">CONTROLLERS</text>
+                <text class="sub" x="325" y="122">η(load) applied</text>
+                <text class="sub" x="325" y="136">never caps power</text>
+
+                <line class="flow f-generation" x1="400" y1="120" x2="456" y2="120"/>
+                <polygon class="a-generation" points="464,120 455,115.5 455,124.5"/>
+
+                <!-- bus -->
+                <text class="sub" x="470" y="16">BUS</text>
+                <line class="bus" x1="470" y1="24" x2="470" y2="228"/>
+
+                <!-- storage -->
+                <rect class="nbox" x="640" y="32" width="154" height="64" rx="2"/>
+                <text class="lbl" x="717" y="58">STORAGE</text>
+                <text class="sub" x="717" y="76">SoC-sorted each step</text>
+                <line class="flow f-charge" x1="476" y1="52" x2="630" y2="52"/>
+                <polygon class="a-charge" points="638,52 629,47.5 629,56.5"/>
+                <text class="alab" x="478" y="43">charge</text>
+                <g class="stepc" data-flow="charge"><circle cx="520" cy="52" r="9.5"/><text x="520" y="55.5">2</text></g>
+                <line class="flow f-discharge" x1="632" y1="80" x2="484" y2="80"/>
+                <polygon class="a-discharge" points="476,80 485,75.5 485,84.5"/>
+                <text class="alab" x="478" y="95">discharge</text>
+                <g class="stepc" data-flow="discharge"><circle cx="520" cy="80" r="9.5"/><text x="520" y="83.5">3</text></g>
+
+                <!-- load -->
+                <rect class="nbox" x="640" y="116" width="154" height="48" rx="2"/>
+                <text class="lbl" x="717" y="136">LOAD</text>
+                <text class="sub" x="717" y="152">demand + HVAC(T)</text>
+                <line class="flow f-demand" x1="476" y1="140" x2="630" y2="140"/>
+                <polygon class="a-demand" points="638,140 629,135.5 629,144.5"/>
+
+                <!-- grid -->
+                <rect class="nbox" x="640" y="180" width="154" height="60" rx="2"/>
+                <text class="lbl" x="717" y="202">GRID</text>
+                <text class="sub" x="717" y="218">± interconnect cap</text>
+                <text class="sub" x="717" y="231">0 ⇒ island mode</text>
+                <line class="flow f-grid_import" x1="632" y1="192" x2="484" y2="192"/>
+                <polygon class="a-grid_import" points="476,192 485,187.5 485,196.5"/>
+                <text class="alab" x="478" y="185">import</text>
+                <line class="flow f-grid_export" x1="476" y1="216" x2="630" y2="216"/>
+                <polygon class="a-grid_export" points="638,216 629,211.5 629,220.5"/>
+                <text class="alab" x="478" y="231">export</text>
+                <g class="stepc" data-flow="grid_import"><circle cx="555" cy="204" r="9.5"/><text x="555" y="207.5">4</text></g>
+
+                <!-- curtail / unmet -->
+                <line class="flow f-curtail" x1="470" y1="228" x2="470" y2="242"/>
+                <polygon class="a-curtail" points="470,250 465.5,241 474.5,241"/>
+                <g class="stepc" data-flow="curtail"><circle cx="446" cy="240" r="9.5"/><text x="446" y="243.5">5</text></g>
+                <text class="alab" x="484" y="248">curtail excess · record unmet</text>
+              </svg>
+            </div>
+
+            <ol class="steps">
+              <li data-flow="generation"><strong>Generation &amp; conversion.</strong>
+                Every source’s <code>output_kw(hour, weather)</code> is summed — the dispatcher never throttles
+                a source. The weighted controller efficiency η is applied to the whole stream; what serves demand
+                immediately is <em>direct supply</em>, the rest is <em>excess</em>.</li>
+              <li data-flow="charge"><strong>Charge storage with the excess.</strong>
+                Units are re-sorted every step by <code>charge_efficiency&nbsp;×&nbsp;(1&nbsp;−&nbsp;SoC)</code> —
+                the most efficient, emptiest unit absorbs first, each up to its <code>max_charge_kw</code>.</li>
+              <li data-flow="discharge"><strong>Discharge to cover remaining demand.</strong>
+                Storage is sorted by <code>discharge_efficiency&nbsp;×&nbsp;SoC</code> — the most efficient,
+                fullest unit delivers first, each up to its <code>max_discharge_kw</code>.</li>
+              <li data-flow="grid_import"><strong>Grid exchange.</strong>
+                Still-unmet demand imports; still-uncharged excess exports. Both directions are capped by
+                <code>grid_interconnect_kw</code> — set it to <span class="num">0</span> for island mode, where
+                neither happens.</li>
+              <li data-flow="curtail"><strong>Curtailment &amp; unmet demand.</strong>
+                Leftover excess is curtailed (discarded); any demand still standing is recorded as
+                <em>unmet</em> and feeds the resilience metrics (LOLP / LOLE / ENS, §4).</li>
+            </ol>
+          </div>
+          <div class="fig-caption"><span class="fig-no">FIG. 1</span>The fixed dispatch path. Generation flows
+            through the controller stage onto the bus (①); excess charges storage (②); shortfall discharges
+            it (③); the grid absorbs or supplies the remainder up to the interconnect cap (④); the rest is
+            curtailed, or recorded as unmet demand (⑤). Arrow hues match the power-balance charts everywhere
+            else on the site.</div>
+        </section>
+
+        <section class="panel reveal" data-rule="loss">
+          <div class="panel-head"><span class="kicker">Engine truths</span>
+            <span class="muted" style="font-size:12px">easy to mis-assume — stated for the record</span></div>
+          <div class="panel-body">
+            <dl class="truths">
+              <dt>Controllers shape efficiency, never power.</dt>
+              <dd>Power is allocated across controllers in declared order up to each unit’s rating to compute a
+                weighted η, which is then applied to <em>all</em> generation — power beyond the aggregate
+                controller rating still flows, it is never clipped. With no controllers configured, a flat
+                <span class="num">0.95</span> is assumed.</dd>
+              <dt>Sources are non-dispatchable.</dt>
+              <dd>The dispatcher takes whatever each source model produces. The one seemingly dispatchable
+                unit, the gas peaker, actually self-schedules inside its own model: a Gaussian ramp across
+                14:00–21:00 peaking near 17:30, a 15% shoulder from 10:00, ~3% standby otherwise.</dd>
+              <dt>Temperature drives HVAC demand only.</dt>
+              <dd>The ambient temperature series feeds <code>LoadProfile.demand_kw</code> (heating/cooling load).
+                Sources are not thermally derated, and each storage unit’s thermal state evolves from its own
+                power flow, not from weather.</dd>
+              <dt>Simulations are seed-deterministic.</dt>
+              <dd>Demand noise is seeded at <span class="num">42</span> and synthetic weather at
+                <span class="num">123</span>, so the same configuration replays bit-identically. Components
+                mutate state in place (SoC, health, fuel reservoirs) — a rerun needs fresh instances, which the
+                engine creates for every run.</dd>
+            </dl>
+          </div>
+        </section>
+      </section>
+
+      <!-- ════ §3 TECHNOLOGIES ══════════════════════════════════════ -->
+      <section class="ref-section" id="technologies">
+        <header class="sec-head">
+          <span class="kicker">§ 3 · Technology catalog</span>
+          <h2>7 sources · 7 storage technologies · 8 controllers</h2>
+          <p class="muted">Parameters shown are constructor defaults; the mono key on each card is the registry
+            key used by the factories and the Builder’s custom spec.</p>
+        </header>
+
+        <section class="panel reveal" data-rule="generation">
+          <div class="panel-head"><span class="kicker">Generation sources</span>
+            <span class="muted" style="font-size:12px">powerplan/sources.py</span></div>
+          <div class="panel-body">
+            <div class="tech-grid">
+
+              <article class="tech-card" data-swatch="src:solar">
+                <header><i class="swatch" aria-hidden="true"></i><h3>Solar PV</h3><span class="tkey">solar_pv</span></header>
+                <p class="tech-char">Clear-sky solar geometry plus diffuse sky, weather-scaled; diurnal and
+                  seasonal. ~15–23% CF by latitude, ×1.25 with tracking.</p>
+                <div class="tech-params">
+                  <div class="p"><span>rated_kw</span><span>10</span></div>
+                  <div class="p"><span>tilt_deg</span><span>|latitude|</span></div>
+                  <div class="p"><span>tracking</span><span>false</span></div>
+                  <div class="p"><span>latitude</span><span>35.0</span></div>
+                </div>
+                <div class="tech-cost">$1,000/kW · $750 above 100 kW · +$200 tracking</div>
+                <div class="scale-dots" aria-label="availability by scale">
+                  <span class="sdot on" title="home · 3–12 kW">H</span>
+                  <span class="sdot on" title="neighborhood · 50–200 kW">N</span>
+                  <span class="sdot on" title="community · 0.3–1.5 MW">C</span>
+                  <span class="sdot on" title="district · 3–20 MW">D</span>
+                  <span class="sdot on" title="metropolitan · 50–300 MW">M</span>
+                </div>
+              </article>
+
+              <article class="tech-card" data-swatch="src:wind">
+                <header><i class="swatch" aria-hidden="true"></i><h3>Wind Turbine</h3><span class="tkey">wind</span></header>
+                <p class="tech-char">Cubic power curve between cut-in and rated wind, flat to cut-out;
+                  synthetic diurnal/seasonal wind with shear correction. ~30% CF.</p>
+                <div class="tech-params">
+                  <div class="p"><span>rated_kw</span><span>5</span></div>
+                  <div class="p"><span>hub_height_m</span><span>30</span></div>
+                  <div class="p"><span>cut-in / rated / out</span><span>3 / 12 / 25 m/s</span></div>
+                  <div class="p"><span>mean_wind_ms</span><span>6.0</span></div>
+                </div>
+                <div class="tech-cost">$3,000/kW below 20 kW · $1,300 utility</div>
+                <div class="scale-dots" aria-label="availability by scale">
+                  <span class="sdot on" title="home · 0.5–3 kW">H</span>
+                  <span class="sdot on" title="neighborhood · 10–50 kW">N</span>
+                  <span class="sdot on" title="community · 200–800 kW">C</span>
+                  <span class="sdot on" title="district · 2–15 MW">D</span>
+                  <span class="sdot on" title="metropolitan · 8–80 MW">M</span>
+                </div>
+              </article>
+
+              <article class="tech-card" data-swatch="src:hydro">
+                <header><i class="swatch" aria-hidden="true"></i><h3>Micro Hydro</h3><span class="tkey">micro_hydro</span></header>
+                <p class="tech-char">Run-of-river: P = ρgQhη with seasonal streamflow — spring snowmelt peak,
+                  late-summer low. ~55% CF.</p>
+                <div class="tech-params">
+                  <div class="p"><span>rated_kw</span><span>15</span></div>
+                  <div class="p"><span>head_m</span><span>10</span></div>
+                  <div class="p"><span>design_flow_m3s</span><span>0.2</span></div>
+                  <div class="p"><span>turbine η</span><span>0.85</span></div>
+                </div>
+                <div class="tech-cost">$4,000/kW</div>
+                <div class="scale-dots" aria-label="availability by scale">
+                  <span class="sdot" title="home · not generated">H</span>
+                  <span class="sdot" title="neighborhood · not generated">N</span>
+                  <span class="sdot on" title="community · 20–100 kW">C</span>
+                  <span class="sdot on" title="district · 0.2–1 MW">D</span>
+                  <span class="sdot on" title="metropolitan · 2–15 MW">M</span>
+                </div>
+              </article>
+
+              <article class="tech-card" data-swatch="src:geothermal">
+                <header><i class="swatch" aria-hidden="true"></i><h3>Geothermal</h3><span class="tkey">geothermal</span></header>
+                <p class="tech-char">Binary-cycle baseload, weather-independent with a slight maintenance
+                  derate — the steadiest source in the catalog. Baseload ~92% CF.</p>
+                <div class="tech-params">
+                  <div class="p"><span>rated_kw</span><span>50</span></div>
+                  <div class="p"><span>well_temp_c</span><span>150</span></div>
+                  <div class="p"><span>cycle η</span><span>0.10 + f(T)</span></div>
+                </div>
+                <div class="tech-cost">$6,000/kW — high upfront, 30+ yr asset</div>
+                <div class="scale-dots" aria-label="availability by scale">
+                  <span class="sdot" title="home · not generated">H</span>
+                  <span class="sdot" title="neighborhood · not generated">N</span>
+                  <span class="sdot" title="community · not generated">C</span>
+                  <span class="sdot on" title="district · 1–5 MW">D</span>
+                  <span class="sdot on" title="metropolitan · 20–80 MW">M</span>
+                </div>
+              </article>
+
+              <article class="tech-card" data-swatch="src:gas">
+                <header><i class="swatch" aria-hidden="true"></i><h3>Gas Turbine</h3><span class="tkey">natural_gas</span></header>
+                <p class="tech-char">The fossil yardstick, non-renewable. CCGT baseload (~55% CF, 0.40 kg
+                  CO₂/kWh) or a peaker (~12% CF, 0.55 kg) that self-schedules 14:00–21:00.</p>
+                <div class="tech-params">
+                  <div class="p"><span>rated_kw</span><span>100,000</span></div>
+                  <div class="p"><span>plant_type</span><span>"ccgt" | "peaker"</span></div>
+                  <div class="p"><span>heat rate</span><span>6,800 / 9,500 BTU/kWh</span></div>
+                  <div class="p"><span>gas price</span><span>$3.50/MMBtu</span></div>
+                </div>
+                <div class="tech-cost">$1,100/kW CCGT · $700 peaker · fuel ≈ $0.024–0.033/kWh</div>
+                <div class="scale-dots" aria-label="availability by scale">
+                  <span class="sdot" title="home · not generated">H</span>
+                  <span class="sdot" title="neighborhood · not generated">N</span>
+                  <span class="sdot on" title="community · 0.5–3 MW">C</span>
+                  <span class="sdot on" title="district · 5–50 MW">D</span>
+                  <span class="sdot on" title="metropolitan · 50–500 MW">M</span>
+                </div>
+              </article>
+
+              <article class="tech-card" data-swatch="src:fusion">
+                <header><i class="swatch" aria-hidden="true"></i><h3>Micro Fusion</h3><span data-spec="compact"></span><span class="tkey">micro_fusion</span></header>
+                <p class="tech-char">Modeled baseload with plasma-stability noise and a one-week maintenance
+                  outage every ~6,000–8,000 h; D-T or aneutronic p-B11. ~92–93% CF. Non-renewable.</p>
+                <div class="tech-params">
+                  <div class="p"><span>rated_kw</span><span>10,000</span></div>
+                  <div class="p"><span>fuel_cycle</span><span>"dt" | "pb11"</span></div>
+                  <div class="p"><span>thermal η</span><span>0.42 / 0.75</span></div>
+                  <div class="p"><span>q_engineering</span><span>10 — reported, unused</span></div>
+                </div>
+                <div class="tech-cost">$9k–27k/kW by size &amp; fuel cycle — speculative</div>
+                <div class="scale-dots" aria-label="availability by scale">
+                  <span class="sdot" title="home · not generated">H</span>
+                  <span class="sdot" title="neighborhood · not generated">N</span>
+                  <span class="sdot on" title="community · 0.5–2 MW">C</span>
+                  <span class="sdot on" title="district · 5–20 MW">D</span>
+                  <span class="sdot on" title="metropolitan · 30–150 MW">M</span>
+                </div>
+              </article>
+
+              <article class="tech-card" data-swatch="src:antimatter">
+                <header><i class="swatch" aria-hidden="true"></i><h3>Antimatter Reactor</h3><span data-spec="compact"></span><span class="tkey">antimatter</span></header>
+                <p class="tech-char">Graphene Penning-trap reactor with three conversion pathways (MHD /
+                  γ-thermal / electron harvest) and a finite antiproton reservoir — ~89% CF until fuel-out
+                  (default reservoir ≈ 5.5 g ≈ 275 GWh). Non-renewable.</p>
+                <div class="tech-params">
+                  <div class="p"><span>rated_kw</span><span>5,000</span></div>
+                  <div class="p"><span>target_atom</span><span>none | xenon | lead | uranium</span></div>
+                  <div class="p"><span>electron_collection η</span><span>0.45 — invented</span></div>
+                  <div class="p"><span>fuel_reservoir_ug</span><span>5.5 × 10⁶</span></div>
+                </div>
+                <div class="tech-cost">$50k–100k/kW by plant size — speculative</div>
+                <div class="scale-dots" aria-label="availability by scale">
+                  <span class="sdot" title="home · not generated">H</span>
+                  <span class="sdot" title="neighborhood · not generated">N</span>
+                  <span class="sdot" title="community · not generated">C</span>
+                  <span class="sdot on" title="district · 10–30 MW">D</span>
+                  <span class="sdot on" title="metropolitan · 50–200 MW">M</span>
+                </div>
+              </article>
+
+            </div>
+          </div>
+          <div class="fig-caption"><span class="fig-no">FIG. 2</span>The seven generation sources. Dots mark the
+            deployment scales at which the random-scenario generator will draw each technology
+            (H&nbsp;home · N&nbsp;neighborhood · C&nbsp;community · D&nbsp;district · M&nbsp;metropolitan);
+            hover a dot for the kW sizing range from <code>SOURCE_SPECS</code>. Multi-unit farms scale via the
+            <code>units</code> kwarg — never multiply ratings at the call site.</div>
+        </section>
+
+        <section class="panel reveal" data-rule="charge">
+          <div class="panel-head"><span class="kicker">Storage technologies</span>
+            <span class="muted" style="font-size:12px">powerplan/storage.py</span></div>
+          <div class="panel-body">
+            <div class="tech-grid">
+
+              <article class="tech-card" data-swatch="sto:lithium">
+                <header><i class="swatch" aria-hidden="true"></i><h3>Li-ion Battery</h3><span class="tkey">lithium_ion</span></header>
+                <p class="tech-char">The workhorse: ~96% one-way η (NMC) with SoC, C-rate and thermal
+                  penalties; 3,000-cycle life (6,000 for LFP).</p>
+                <div class="tech-params">
+                  <div class="p"><span>capacity_kwh</span><span>13.5</span></div>
+                  <div class="p"><span>max_power_kw</span><span>5</span></div>
+                  <div class="p"><span>chemistry</span><span>"nmc" | "lfp"</span></div>
+                  <div class="p"><span>self-discharge</span><span>~0.5%/day</span></div>
+                </div>
+                <div class="tech-cost">$180/kWh NMC · $150 LFP</div>
+                <div class="scale-dots" aria-label="availability by scale">
+                  <span class="sdot on" title="home · 5–20 kWh">H</span>
+                  <span class="sdot on" title="neighborhood · 30–150 kWh">N</span>
+                  <span class="sdot on" title="community · 0.2–1 MWh">C</span>
+                  <span class="sdot on" title="district · 2–15 MWh">D</span>
+                  <span class="sdot on" title="metropolitan · 50–300 MWh">M</span>
+                </div>
+              </article>
+
+              <article class="tech-card" data-swatch="sto:sodium">
+                <header><i class="swatch" aria-hidden="true"></i><h3>Na Solid-State</h3><span class="tkey">sodium_solid_state</span></header>
+                <p class="tech-char">Abundant-materials cell with a flat ~92%/91% efficiency curve and very low
+                  self-discharge; ~8,000-cycle life.</p>
+                <div class="tech-params">
+                  <div class="p"><span>capacity_kwh</span><span>10</span></div>
+                  <div class="p"><span>max_power_kw</span><span>3</span></div>
+                  <div class="p"><span>self-discharge</span><span>~0.24%/day</span></div>
+                </div>
+                <div class="tech-cost">$120/kWh — projected sodium advantage</div>
+                <div class="scale-dots" aria-label="availability by scale">
+                  <span class="sdot on" title="home · 5–15 kWh">H</span>
+                  <span class="sdot on" title="neighborhood · 20–80 kWh">N</span>
+                  <span class="sdot on" title="community · 100–600 kWh">C</span>
+                  <span class="sdot on" title="district · 1–8 MWh">D</span>
+                  <span class="sdot on" title="metropolitan · 20–100 MWh">M</span>
+                </div>
+              </article>
+
+              <article class="tech-card" data-swatch="sto:flow">
+                <header><i class="swatch" aria-hidden="true"></i><h3>Flow Battery</h3><span class="tkey">liquid_electrolyte</span></header>
+                <p class="tech-char">Vanadium-redox style tanks: power and energy decoupled, deep cycling,
+                  ~81–82% one-way η including pump losses; ~20,000 cycles.</p>
+                <div class="tech-params">
+                  <div class="p"><span>capacity_kwh</span><span>50</span></div>
+                  <div class="p"><span>max_power_kw</span><span>10</span></div>
+                  <div class="p"><span>chemistry</span><span>"vanadium"</span></div>
+                </div>
+                <div class="tech-cost">$250/kWh — energy scales cheaply</div>
+                <div class="scale-dots" aria-label="availability by scale">
+                  <span class="sdot" title="home · not generated">H</span>
+                  <span class="sdot" title="neighborhood · not generated">N</span>
+                  <span class="sdot on" title="community · 0.2–1 MWh">C</span>
+                  <span class="sdot on" title="district · 2–20 MWh">D</span>
+                  <span class="sdot on" title="metropolitan · 50–400 MWh">M</span>
+                </div>
+              </article>
+
+              <article class="tech-card" data-swatch="sto:flywheel">
+                <header><i class="swatch" aria-hidden="true"></i><h3>Flywheel</h3><span class="tkey">flywheel</span></header>
+                <p class="tech-char">Kinetic buffer: ~93% η and near-unlimited cycles, but ~24%/day standby
+                  bleed — minutes-to-hours duration, power is the product.</p>
+                <div class="tech-params">
+                  <div class="p"><span>capacity_kwh</span><span>5</span></div>
+                  <div class="p"><span>max_power_kw</span><span>100</span></div>
+                  <div class="p"><span>self-discharge</span><span>~1%/h</span></div>
+                </div>
+                <div class="tech-cost">$5,000/kWh — pay for power, not energy</div>
+                <div class="scale-dots" aria-label="availability by scale">
+                  <span class="sdot" title="home · not generated">H</span>
+                  <span class="sdot on" title="neighborhood · 1–5 kWh">N</span>
+                  <span class="sdot on" title="community · 3–15 kWh">C</span>
+                  <span class="sdot on" title="district · 20–100 kWh">D</span>
+                  <span class="sdot on" title="metropolitan · 50–500 kWh">M</span>
+                </div>
+              </article>
+
+              <article class="tech-card" data-swatch="sto:hydrogen">
+                <header><i class="swatch" aria-hidden="true"></i><h3>H₂ Fuel Cell</h3><span class="tkey">hydrogen_fuel_cell</span></header>
+                <p class="tech-char">Seasonal storage: ~70% electrolyzer × ~55% fuel cell (≈39% round trip),
+                  near-zero tank loss. Capacity = tank kg × 33.3 kWh/kg.</p>
+                <div class="tech-params">
+                  <div class="p"><span>h2_tank_kg</span><span>50 (= 1,665 kWh)</span></div>
+                  <div class="p"><span>electrolyzer_kw</span><span>25</span></div>
+                  <div class="p"><span>fuel_cell_kw</span><span>20</span></div>
+                </div>
+                <div class="tech-cost">$35/kWh tank basis — converters not capitalized</div>
+                <div class="scale-dots" aria-label="availability by scale">
+                  <span class="sdot" title="home · not generated">H</span>
+                  <span class="sdot" title="neighborhood · not generated">N</span>
+                  <span class="sdot on" title="community · 1–5 MWh">C</span>
+                  <span class="sdot on" title="district · 10–200 MWh">D</span>
+                  <span class="sdot on" title="metropolitan · 0.1–5 GWh">M</span>
+                </div>
+              </article>
+
+              <article class="tech-card" data-swatch="sto:supercap">
+                <header><i class="swatch" aria-hidden="true"></i><h3>Graphene Supercap</h3><span class="tkey">graphene_supercap</span></header>
+                <p class="tech-char">Electrostatic double-layer construct: sub-ms response, ~10⁶ cycles,
+                  ≥99% η at modest current (I²R-limited); ~5%/day leakage.</p>
+                <div class="tech-params">
+                  <div class="p"><span>capacity_kwh</span><span>50</span></div>
+                  <div class="p"><span>max_power_kw</span><span>10,000</span></div>
+                  <div class="p"><span>cell_voltage</span><span>3.8 V</span></div>
+                  <div class="p"><span>esr_mohm</span><span>0.5</span></div>
+                </div>
+                <div class="tech-cost">$8,000/kWh — expensive energy, cheap cycles</div>
+                <div class="scale-dots" aria-label="availability by scale">
+                  <span class="sdot" title="home · not generated">H</span>
+                  <span class="sdot" title="neighborhood · not generated">N</span>
+                  <span class="sdot on" title="community · 10–50 kWh">C</span>
+                  <span class="sdot on" title="district · 50–300 kWh">D</span>
+                  <span class="sdot on" title="metropolitan · 0.2–5 MWh">M</span>
+                </div>
+              </article>
+
+              <article class="tech-card" data-swatch="sto:smes">
+                <header><i class="swatch" aria-hidden="true"></i><h3>SMES</h3><span class="tkey">smes</span></header>
+                <p class="tech-char">Superconducting magnetic storage: sub-cycle (&lt;16 ms) response, ~95% η
+                  after cryo overhead, tiny energy behind extreme power.</p>
+                <div class="tech-params">
+                  <div class="p"><span>capacity_kwh</span><span>20</span></div>
+                  <div class="p"><span>max_power_kw</span><span>50,000</span></div>
+                  <div class="p"><span>inductance_h / temp</span><span>10 H · 30 K</span></div>
+                  <div class="p"><span>cryo_power_fraction</span><span>0.03</span></div>
+                </div>
+                <div class="tech-cost">$50,000/kWh — the priciest energy in the catalog</div>
+                <div class="scale-dots" aria-label="availability by scale">
+                  <span class="sdot" title="home · not generated">H</span>
+                  <span class="sdot" title="neighborhood · not generated">N</span>
+                  <span class="sdot" title="community · not generated">C</span>
+                  <span class="sdot on" title="district · 10–80 kWh">D</span>
+                  <span class="sdot on" title="metropolitan · 30–500 kWh">M</span>
+                </div>
+              </article>
+
+            </div>
+          </div>
+          <div class="fig-caption"><span class="fig-no">FIG. 3</span>The seven storage technologies. Dots show
+            random-scenario availability with kWh sizing ranges from <code>STORAGE_SPECS</code> (hover);
+            power ratings in scenarios follow each tech’s power-to-energy ratio — 0.02 for hydrogen up to
+            2,000 for SMES. All units degrade per equivalent full cycle and self-discharge per hour.</div>
+        </section>
+
+        <section class="panel reveal" data-rule="grid_export">
+          <div class="panel-head"><span class="kicker">Power controllers</span>
+            <span class="muted" style="font-size:12px">powerplan/controllers.py</span></div>
+          <div class="panel-body">
+            <div class="tech-grid">
+
+              <article class="tech-card" data-swatch="cat:0">
+                <header><i class="swatch" aria-hidden="true"></i><h3>SiC Converter</h3><span class="tkey">sic</span></header>
+                <p class="tech-char">Silicon-carbide MOSFET stage for medium/high power; peak ~98.5% η at
+                  40–60% load, standby losses dominate below.</p>
+                <div class="tech-params">
+                  <div class="p"><span>rated_kw</span><span>50</span></div>
+                  <div class="p"><span>switching_freq_khz</span><span>100</span></div>
+                  <div class="p"><span>topology</span><span>full_bridge</span></div>
+                </div>
+                <div class="tech-cost">not capitalized — η only</div>
+                <div class="pair">general-purpose bus converter</div>
+              </article>
+
+              <article class="tech-card" data-swatch="cat:8">
+                <header><i class="swatch" aria-hidden="true"></i><h3>GaN Converter</h3><span class="tkey">gan</span></header>
+                <p class="tech-char">Gallium-nitride HEMT stage for residential / small commercial; peak ~99% η,
+                  excels at high switching frequency.</p>
+                <div class="tech-params">
+                  <div class="p"><span>rated_kw</span><span>10</span></div>
+                  <div class="p"><span>switching_freq_khz</span><span>500</span></div>
+                  <div class="p"><span>topology</span><span>half_bridge</span></div>
+                </div>
+                <div class="tech-cost">not capitalized — η only</div>
+                <div class="pair">general-purpose, small scales</div>
+              </article>
+
+              <article class="tech-card" data-swatch="pal:solar">
+                <header><i class="swatch" aria-hidden="true"></i><h3>MPPT Controller</h3><span class="tkey">mppt</span></header>
+                <p class="tech-char">Solar front-end: 99.5% tracking accuracy on a ~97.5% conversion base,
+                  wide-input boost stage.</p>
+                <div class="tech-params">
+                  <div class="p"><span>rated_kw</span><span>10</span></div>
+                  <div class="p"><span>algorithm</span><span>perturb_observe</span></div>
+                  <div class="p"><span>topology</span><span>boost</span></div>
+                </div>
+                <div class="tech-cost">not capitalized — η only</div>
+                <div class="pair">auto-paired with solar_pv</div>
+              </article>
+
+              <article class="tech-card" data-swatch="pal:discharge">
+                <header><i class="swatch" aria-hidden="true"></i><h3>Bidirectional Inverter</h3><span class="tkey">bidirectional</span></header>
+                <p class="tech-char">Grid-tied storage inverter, CEC-style efficiency curve with output-filter
+                  loss; peak ~97.5% η.</p>
+                <div class="tech-params">
+                  <div class="p"><span>rated_kw</span><span>25</span></div>
+                  <div class="p"><span>grid_voltage / phases</span><span>240 V · 1φ</span></div>
+                  <div class="p"><span>topology</span><span>h_bridge</span></div>
+                </div>
+                <div class="tech-cost">not capitalized — η only</div>
+                <div class="pair">storage ↔ AC interface</div>
+              </article>
+
+              <article class="tech-card" data-swatch="pal:hydrogen">
+                <header><i class="swatch" aria-hidden="true"></i><h3>H₂ Controller</h3><span class="tkey">hydrogen</span></header>
+                <p class="tech-char">Electrolyzer / fuel-cell bus manager; ~96% ceiling minus a 2%
+                  balance-of-plant tax, 10%/s ramp limit.</p>
+                <div class="tech-params">
+                  <div class="p"><span>rated_kw</span><span>25</span></div>
+                  <div class="p"><span>ramp limit</span><span>10%/s</span></div>
+                  <div class="p"><span>topology</span><span>interleaved_boost</span></div>
+                </div>
+                <div class="tech-cost">not capitalized — η only</div>
+                <div class="pair">auto-paired with hydrogen_fuel_cell</div>
+              </article>
+
+              <article class="tech-card" data-swatch="pal:fusion">
+                <header><i class="swatch" aria-hidden="true"></i><h3>Fusion Controller</h3><span data-spec="compact"></span><span class="tkey">fusion</span></header>
+                <p class="tech-char">sCO₂ Brayton turbine-generator or direct-conversion chain; peak ~97–98% η
+                  at 70–90% load, parasitic pumps below.</p>
+                <div class="tech-params">
+                  <div class="p"><span>rated_kw</span><span>10,000</span></div>
+                  <div class="p"><span>conversion</span><span>"brayton" | direct</span></div>
+                  <div class="p"><span>topology</span><span>multi_stage</span></div>
+                </div>
+                <div class="tech-cost">not capitalized — η only</div>
+                <div class="pair">auto-paired with micro_fusion</div>
+              </article>
+
+              <article class="tech-card" data-swatch="pal:smes">
+                <header><i class="swatch" aria-hidden="true"></i><h3>Cryo Power Supply</h3><span class="tkey">cryogenic</span></header>
+                <p class="tech-char">Drives HTS magnets and cryocoolers; ~95% ceiling minus a 1/T Carnot
+                  overhead (capped at 15%) — colder stages cost more.</p>
+                <div class="tech-params">
+                  <div class="p"><span>rated_kw</span><span>500</span></div>
+                  <div class="p"><span>cooling_stage_k</span><span>30</span></div>
+                  <div class="p"><span>topology</span><span>resonant_converter</span></div>
+                </div>
+                <div class="tech-cost">not capitalized — η only</div>
+                <div class="pair">auto-paired with smes</div>
+              </article>
+
+              <article class="tech-card" data-swatch="pal:antimatter">
+                <header><i class="swatch" aria-hidden="true"></i><h3>Antimatter Controller</h3><span data-spec="compact"></span><span class="tkey">antimatter</span></header>
+                <p class="tech-char">Triple-pathway conditioning — MHD 96% / thermal 93% / electron-DC 98%
+                  peaks, blended by pathway fractions, minus containment parasitics.</p>
+                <div class="tech-params">
+                  <div class="p"><span>rated_kw</span><span>5,000</span></div>
+                  <div class="p"><span>mhd / electron fraction</span><span>0.70 · 0.00</span></div>
+                  <div class="p"><span>parasitic fraction</span><span>0.05</span></div>
+                  <div class="p"><span>topology</span><span>triple_pathway</span></div>
+                </div>
+                <div class="tech-cost">not capitalized — η only</div>
+                <div class="pair">auto-paired with antimatter</div>
+              </article>
+
+            </div>
+          </div>
+          <div class="fig-caption"><span class="fig-no">FIG. 4</span>The eight controllers. They shape conversion
+            efficiency only — never a power cap, never a line in CAPEX. No per-scale dots because random
+            scenarios derive controllers from the chosen sources and storage
+            (<code>CONTROLLER_REQUIREMENTS</code>), not from a spec table; presets size SiC/GaN/bidirectional
+            stages to the scale by hand.</div>
+        </section>
+      </section>
+
+      <!-- ════ §4 METRICS ═══════════════════════════════════════════ -->
+      <section class="ref-section" id="metrics">
+        <header class="sec-head">
+          <span class="kicker">§ 4 · Metrics glossary</span>
+          <h2>Every number the engine reports</h2>
+          <p class="muted">Aggregated once per run by <code>compute_metrics()</code>; resilience keys by
+            <code>ResilienceMetrics.compute()</code>. Units as serialized in the JSON documents.</p>
+        </header>
+
+        <section class="panel reveal" data-rule="demand">
+          <div class="panel-head"><span class="kicker">Simulation metrics</span></div>
+          <div class="panel-body">
+            <div class="table-wrap">
+              <table class="data">
+                <thead><tr><th>Key</th><th>Unit</th><th>Definition</th></tr></thead>
+                <tbody>
+                  <tr><td><code>simulation_hours</code></td><td class="u">h</td><td class="def">Total simulated span: n_steps × dt_hours.</td></tr>
+                  <tr><td><code>total_demand_kwh</code></td><td class="u">kWh</td><td class="def">Σ demand × dt over the run.</td></tr>
+                  <tr><td><code>total_generation_kwh</code></td><td class="u">kWh</td><td class="def">Σ raw source output × dt, measured <em>before</em> controller losses.</td></tr>
+                  <tr><td><code>total_curtailment_kwh</code></td><td class="u">kWh</td><td class="def">Σ discarded excess × dt — generation left over with storage full and the export cap reached.</td></tr>
+                  <tr><td><code>total_grid_import_kwh</code></td><td class="u">kWh</td><td class="def">Σ grid imports × dt.</td></tr>
+                  <tr><td><code>total_grid_export_kwh</code></td><td class="u">kWh</td><td class="def">Σ grid exports × dt.</td></tr>
+                  <tr><td><code>total_controller_losses_kwh</code></td><td class="u">kWh</td><td class="def">Σ generation × (1 − η<sub>ctrl</sub>) × dt — energy lost in the conversion stage.</td></tr>
+                  <tr><td><code>generation_to_demand_ratio</code></td><td class="u">ratio</td><td class="def">total_generation_kwh ÷ total_demand_kwh.</td></tr>
+                  <tr><td><code>curtailment_fraction</code></td><td class="u">0–1</td><td class="def">total_curtailment_kwh ÷ total_generation_kwh.</td></tr>
+                  <tr><td><code>avg_system_efficiency</code></td><td class="u">0–1</td><td class="def">Mean per-step (direct supply + storage charge) ÷ generation. Steps where the ratio is exactly zero are excluded; zero-generation steps record 1.0 and are included.</td></tr>
+                  <tr><td><code>avg_renewable_fraction</code></td><td class="u">0–1</td><td class="def">Mean per-step renewable share of served load: (renewable direct + storage discharge) ÷ (direct + discharge + imports). All storage discharge counts as renewable; gas, fusion and antimatter do not.</td></tr>
+                  <tr><td><code>peak_demand_kw</code></td><td class="u">kW</td><td class="def">Maximum instantaneous demand over the run.</td></tr>
+                  <tr><td><code>peak_generation_kw</code></td><td class="u">kW</td><td class="def">Maximum instantaneous raw generation.</td></tr>
+                  <tr><td><code>self_sufficiency</code></td><td class="u">0–1</td><td class="def">1 − imports ÷ demand: the share of consumption met without the grid.</td></tr>
+                  <tr><td><code>total_capex_usd</code></td><td class="u">$</td><td class="def">Source $/kW × rated capacity + storage $/kWh × nominal capacity. Controllers carry no capital cost.</td></tr>
+                  <tr><td><code>estimated_lcoe_usd_kwh</code></td><td class="u">$/kWh</td><td class="def">total_capex ÷ (run generation × 12.46), where 12.46 = Σ<sub>y=1..20</sub> 1.05<sup>−y</sup>. Serialized as null when nothing was generated (∞). See the caveat below.</td></tr>
+                  <tr><td><code>source_details</code></td><td class="u">—</td><td class="def">Per-source summaries: rated kW, modeled annual CF, capital cost, cumulative kWh (plus fuel/emissions extras where the tech has them).</td></tr>
+                  <tr><td><code>storage_details</code></td><td class="u">—</td><td class="def">Per-unit summaries: nominal vs health-derated capacity, final SoC, health, equivalent cycles, temperature, capital cost.</td></tr>
+                  <tr><td><code>controller_details</code></td><td class="u">—</td><td class="def">Per-controller summaries: rating, topology, cumulative conversion loss, operating hours.</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="callout" style="border-left-color: var(--spec-edge)">
+              <strong>LCOE caveat.</strong> LCOE assumes 20-year amortization at 5% discount of source + storage
+              capex against <em>annual</em> generation — live runs shorter than a year feed the formula less than
+              a year’s energy and overstate it by roughly <span class="num">8760 ⁄ hours</span> (a 720 h run reads
+              ~12× too high; live pages print this factor next to the figure). All pre-baked numbers on this site
+              come from full-year, 8,760 h runs.
+            </div>
+          </div>
+          <div class="fig-caption"><span class="fig-no">FIG. 5</span>Scalar metrics of every simulation document,
+            pre-baked or live. Fields named <code>*_kw</code> are instantaneous power, <code>*_kwh</code> are
+            energy integrated over the run.</div>
+        </section>
+
+        <section class="panel reveal" data-rule="unmet">
+          <div class="panel-head"><span class="kicker">Resilience metrics</span>
+            <span class="muted" style="font-size:12px">12 keys · deficit threshold 0.1 kW</span></div>
+          <div class="panel-body">
+            <div class="table-wrap">
+              <table class="data">
+                <thead><tr><th>Key</th><th>Unit</th><th>Definition</th></tr></thead>
+                <tbody>
+                  <tr><td><code>lolp</code></td><td class="u">0–1</td><td class="def"><strong>Loss-of-load probability</strong>: the fraction of timesteps with unmet demand above 0.1 kW. A LOLP of 0.02 means demand went unserved in 2% of simulated steps.</td></tr>
+                  <tr><td><code>lole_hours</code></td><td class="u">h</td><td class="def"><strong>Loss-of-load expectation</strong>: LOLP × simulated hours — the expected hours of lost load over the run. Multiply by 8760 ⁄ hours to annualize a short run.</td></tr>
+                  <tr><td><code>ens_kwh</code></td><td class="u">kWh</td><td class="def"><strong>Energy not served</strong>: Σ unmet demand × dt — how much energy customers wanted but never received.</td></tr>
+                  <tr><td><code>system_reserve_margin</code></td><td class="u">ratio</td><td class="def">(Σ rated source capacity − peak demand) ÷ peak demand. A static planning margin; ignores coincidence of output with demand.</td></tr>
+                  <tr><td><code>min_reserve_margin</code></td><td class="u">ratio</td><td class="def">Minimum over steps of (generation + discharge + imports − demand) ÷ demand. Goes negative inside a deficit.</td></tr>
+                  <tr><td><code>max_deficit_kw</code></td><td class="u">kW</td><td class="def">Deepest instantaneous shortfall.</td></tr>
+                  <tr><td><code>max_deficit_hour</code></td><td class="u">h</td><td class="def">Hour-of-year at which that deepest shortfall occurred (0 if none).</td></tr>
+                  <tr><td><code>max_deficit_duration_hours</code></td><td class="u">h</td><td class="def">Longest contiguous window of deficit steps.</td></tr>
+                  <tr><td><code>recovery_time_avg</code></td><td class="u">h</td><td class="def">Mean hours after each deficit window until aggregate storage SoC climbs back above 20%; capped at 168 h (one week) per event.</td></tr>
+                  <tr><td><code>recovery_time_max</code></td><td class="u">h</td><td class="def">Worst-case recovery among those events, same 168 h cap.</td></tr>
+                  <tr><td><code>min_aggregate_soc</code></td><td class="u">0–1</td><td class="def">Lowest mean state-of-charge across all storage units at any step (reported as 1.0 when the config has no storage).</td></tr>
+                  <tr><td><code>storage_depletion_hours</code></td><td class="u">h</td><td class="def">Hours spent with aggregate SoC below 5% — time the system flew without a buffer.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="fig-caption"><span class="fig-no">FIG. 6</span>Resilience keys attached to stress runs and
+            batch studies on the Resilience page (and to any document whose run computed them). LOLP/LOLE/ENS
+            are the standard adequacy triad; the rest characterize depth, duration and recovery.</div>
+        </section>
+      </section>
+
+      <!-- ════ §5 COLOPHON ══════════════════════════════════════════ -->
+      <section class="ref-section" id="colophon">
+        <header class="sec-head">
+          <span class="kicker">§ 5 · Colophon</span>
+          <h2>Palette, provenance, privacy</h2>
+        </header>
+
+        <section class="panel reveal" data-rule="loss">
+          <div class="panel-head"><span class="kicker">Palette legend</span>
+            <span class="muted" style="font-size:12px">Paul Tol’s muted colorblind-safe scheme</span></div>
+          <div class="panel-body">
+            <div id="palette-legend" class="pal-wrap"><p class="muted">Palette legend renders via JavaScript.</p></div>
+          </div>
+          <div class="fig-caption"><span class="fig-no">FIG. 7</span>Verbatim port of
+            <code>powerplan/styles.py</code> — Paul Tol’s muted colorblind-safe scheme (the Python docstring
+            credits Wong 2011, but the hexes are Tol’s). Source and storage hues alias the flow roles where
+            meanings coincide. Two hues get dark-mode contrast substitutes (#332288 → #5B4FC0,
+            #882255 → #A8336B); <code>unmet</code> and <code>accent</code> exist only in the web frontend.</div>
+        </section>
+
+        <section class="panel reveal" data-rule="loss">
+          <div class="panel-head"><span class="kicker">About this build</span></div>
+          <div class="panel-body">
+            <div class="colo-grid">
+              <div><span class="kicker">Engine</span><div class="num" id="engine-version">…</div></div>
+              <div><span class="kicker">Pre-baked run length</span><div class="num" id="engine-hours">…</div></div>
+              <div><span class="kicker">Preset configurations</span><div class="num" id="engine-presets">…</div></div>
+            </div>
+            <div class="colo-prose">
+              <p><strong>Everything runs locally.</strong> All live simulations — Builder, Resilience,
+                Municipal — run in your browser via Pyodide (CPython on WebAssembly) inside a web worker.
+                The engine package downloads once; nothing you configure or run is ever uploaded.</p>
+              <p><strong>Regenerating the baked data.</strong> The pre-computed figures (presets, comparison,
+                projections, the resilience sample) are written by <code>scripts/prebake.py</code> at the repo
+                root. Re-run it after engine changes to refresh <code>docs/data/</code> and the cache-busting
+                hashes in the <a href="data/index.json">data manifest</a>.</p>
+              <p><strong>Further reading.</strong> The <a href="../README.md">project README</a> covers the
+                Python CLI (<code>run_simulation.py</code>, <code>run_examples.py</code>), and
+                <code>CLAUDE.md</code> documents the architecture this page summarizes.</p>
+            </div>
+          </div>
+        </section>
+      </section>
+
+    </div><!-- /.ref-main -->
+  </div><!-- /.ref-layout -->
+</main>
+<script type="module">
+  import { initNav } from "./js/nav.js";
+  initNav("reference");
+  import("./js/pages/reference.js").then(m => m.init());
+</script>
+</body>
+</html>

@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PowerPlan — Resilience</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/site.css">
+<script>const t=localStorage.getItem("pp-theme");if(t)document.documentElement.dataset.theme=t;</script>
+<style>
+/* ── resilience page-local styles ──────────────────────────────────── */
+.tab-section[hidden] { display: none !important; }
+.run-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin: 14px 0; }
+.run-row .progress-line { flex: 1; min-width: 240px; }
+.run-row .progress-line .btn { padding: 3px 9px; font-size: 11px; font-weight: 500; }
+.tl-buttons { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 10px; }
+.tl-buttons .btn { padding: 4px 10px; font-size: 12px; font-weight: 500; }
+.tl-buttons .btn i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+.tl-tick { position: absolute; top: 0; bottom: 14px; width: 0; border-left: 1px dashed var(--hairline); pointer-events: none; }
+.timeline .axis span { position: absolute; bottom: 1px; transform: translateX(3px); }
+.tl-empty { position: absolute; inset: 0 0 14px; display: flex; align-items: center; justify-content: center;
+            font-size: 11.5px; color: var(--ink-faint); pointer-events: none; }
+.ev-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.ev-chips .x { margin-left: 2px; color: var(--ink-faint); }
+.ev-chips .chip:hover .x { color: var(--danger); }
+.kpi-value.pair { font-size: 15px; }
+.pair-arrow { margin: 0 7px; color: var(--ink-faint); font-family: var(--font-mono); }
+.pair-delta { font: 11.5px var(--font-mono); margin-top: 2px; }
+.ctl-row { display: flex; flex-wrap: wrap; gap: 14px 18px; align-items: flex-end; }
+.ctl-row label.field { margin: 0; }
+.foot-note { font-size: 11.5px; color: var(--ink-mid); margin: 8px 2px 0; }
+.popover .row { display: flex; gap: 10px; }
+.popover .actions { display: flex; justify-content: space-between; margin-top: 10px; }
+.popover label.field { margin: 6px 0; }
+table.data th .dir { font-size: 9px; margin-left: 4px; color: var(--accent); }
+.head-meta { font-size: 11.5px; color: var(--ink-mid); max-width: 58%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+</style>
+</head>
+<body>
+<main class="page">
+  <div class="page-title-row">
+    <h1>Resilience</h1>
+    <span class="kicker">failure injection · adequacy statistics</span>
+    <span style="flex:1"></span>
+    <span class="seg" id="rzTabs">
+      <button data-tab="stress" class="on">Stress one system</button>
+      <button data-tab="batch">Batch scenario lab</button>
+    </span>
+  </div>
+  <p class="muted" style="max-width:80ch;margin:0 0 16px">
+    Inject equipment trips, storms and demand surges into one configuration and compare the stressed
+    trajectory against an identical-weather baseline — or sweep randomly generated fleets through batches of
+    failure scenarios to see which component mixes hold up. Metrics follow standard adequacy definitions:
+    loss-of-load probability (LOLP), loss-of-load expectation (LOLE) and energy not served (ENS).
+  </p>
+  <noscript><div class="callout error">This page is interactive and requires JavaScript.</div></noscript>
+
+  <!-- ════ TAB A — stress one system ════════════════════════════════ -->
+  <section id="tabStress" class="tab-section">
+    <div class="grid">
+      <section class="panel reveal col-4" id="cfgPanel">
+        <div class="panel-head"><span class="kicker">System under test</span></div>
+        <div class="panel-body">
+          <label class="field"><span>Configuration <span id="aSpecMark"></span></span>
+            <select id="aPreset"><option value="">loading manifest…</option></select>
+          </label>
+          <div class="ctl-row" style="margin-top:12px">
+            <label class="field"><span>Horizon</span>
+              <span class="seg" id="aDur">
+                <button data-h="720" class="on">30 d</button>
+                <button data-h="2160">90 d</button>
+                <button data-h="8760">365 d</button>
+              </span>
+            </label>
+            <label class="field"><span>Seed</span>
+              <input type="number" id="aSeed" value="42" min="0" step="1" style="width:90px">
+            </label>
+          </div>
+          <p class="foot-note">Baseline and stressed runs share the same weather draw (same seed), so every
+            delta in the results is attributable to the injected failures alone.</p>
+        </div>
+      </section>
+
+      <section class="panel reveal col-8" id="tlPanel">
+        <div class="panel-head">
+          <span class="kicker">Failure timeline</span>
+          <span class="num muted" id="tlSpan" style="font-size:11px"></span>
+        </div>
+        <div class="panel-body" id="tlBody" style="position:relative">
+          <div class="tl-buttons" id="tlButtons"></div>
+          <div class="timeline" id="tlTrack"></div>
+          <div class="ev-chips" id="tlChips"></div>
+        </div>
+        <div class="fig-caption"><span class="fig-no">FIG. 1</span>Composed failure events over the
+          simulation horizon. Click an event band or chip to edit its start, duration and intensity.</div>
+      </section>
+    </div>
+
+    <div id="aSpecNote"></div>
+    <div class="run-row">
+      <button class="btn primary" id="aRun">Run baseline + stressed</button>
+      <div class="progress-line" id="aProg" hidden>
+        <span id="aProgText" class="num" style="min-width:150px"></span>
+        <span class="bar"><i id="aProgBar"></i></span>
+        <button class="btn" id="aCancel">cancel</button>
+      </div>
+    </div>
+    <div id="aError"></div>
+
+    <div id="aResults">
+      <div class="empty-state">
+        No run yet — pick a configuration, compose a failure timeline above, then run the paired simulation.
+        <br><small class="faint">Runs in-browser via WebAssembly; the first run downloads the Python runtime (~15&nbsp;MB).</small>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════ TAB B — batch scenario lab ═══════════════════════════════ -->
+  <section id="tabBatch" class="tab-section" hidden>
+    <section class="panel reveal" id="bCtl">
+      <div class="panel-head">
+        <span class="kicker">Batch parameters</span>
+        <span class="head-meta">N random configs × (M failure scenarios + 1 baseline) each</span>
+      </div>
+      <div class="panel-body">
+        <div class="ctl-row">
+          <label class="field"><span>Scale</span>
+            <select id="bScale" style="width:160px">
+              <option value="home">Home</option>
+              <option value="neighborhood">Neighborhood</option>
+              <option value="community" selected>Community</option>
+              <option value="district">District</option>
+              <option value="metropolitan">Metropolitan</option>
+            </select>
+          </label>
+          <label class="field"><span>Technology tier</span>
+            <span class="seg" id="bTier">
+              <button data-tier="conventional" class="on">conventional</button>
+              <button data-tier="exotic">exotic</button>
+              <button data-tier="antimatter">antimatter</button>
+            </span>
+          </label>
+          <label class="field"><span>Configs (N)</span>
+            <input id="bN" type="number" value="5" min="1" max="20" step="1" style="width:76px"></label>
+          <label class="field"><span>Failures (M)</span>
+            <input id="bM" type="number" value="2" min="1" max="5" step="1" style="width:76px"></label>
+          <label class="field"><span>Seed</span>
+            <input id="bSeed" type="number" value="42" min="0" step="1" style="width:90px"></label>
+          <label class="field"><span>Horizon</span>
+            <span class="seg" id="bDays">
+              <button data-d="30" class="on">30 d</button>
+              <button data-d="90">90 d</button>
+            </span>
+          </label>
+        </div>
+        <div id="bSpecNote"></div>
+        <div class="run-row" style="margin-bottom:2px">
+          <button class="btn primary" id="bRun">Run batch</button>
+          <span class="muted" style="font-size:12px">est. <span class="num" id="bEst">—</span></span>
+          <button class="btn" id="bSample">Load pre-baked sample</button>
+          <div class="progress-line" id="bProg" hidden>
+            <span id="bProgText" class="num" style="min-width:110px"></span>
+            <span class="bar"><i id="bProgBar"></i></span>
+            <button class="btn" id="bCancel">cancel</button>
+          </div>
+        </div>
+        <div id="bError"></div>
+      </div>
+    </section>
+
+    <p id="bMeta" class="muted" style="margin:14px 2px 10px;font-size:12.5px">loading pre-baked sample…</p>
+
+    <div class="grid">
+      <section class="panel reveal col-4" id="pHistLolp">
+        <div class="panel-head"><span class="kicker">LOLP distribution</span></div>
+        <div class="panel-body"><div class="chart short" id="chHistLolp"><div class="skeleton" style="height:200px"></div></div></div>
+        <div class="fig-caption"><span class="fig-no">FIG. 4</span>Loss-of-load probability across all runs,
+          baselines included. Dashed line marks the batch mean. Click a bin to filter the run table.</div>
+      </section>
+      <section class="panel reveal col-4" id="pHistEns">
+        <div class="panel-head"><span class="kicker">ENS distribution</span></div>
+        <div class="panel-body"><div class="chart short" id="chHistEns"><div class="skeleton" style="height:200px"></div></div></div>
+        <div class="fig-caption"><span class="fig-no">FIG. 5</span>Energy not served per run. Heavy right
+          tails usually indicate undersized firm capacity at this scale.</div>
+      </section>
+      <section class="panel reveal col-4" id="pHistRec">
+        <div class="panel-head"><span class="kicker">Max recovery time</span></div>
+        <div class="panel-body"><div class="chart short" id="chHistRec"><div class="skeleton" style="height:200px"></div></div></div>
+        <div class="fig-caption"><span class="fig-no">FIG. 6</span>Longest single deficit-to-recovery
+          interval in each run, capped at the 168&nbsp;h tracking window.</div>
+      </section>
+
+      <section class="panel reveal col-6" id="pImpact">
+        <div class="panel-head"><span class="kicker">Component resilience impact</span></div>
+        <div class="panel-body"><div class="chart" id="chImpact"><div class="skeleton" style="height:240px"></div></div></div>
+        <div class="fig-caption"><span class="fig-no">FIG. 7</span>Δ&nbsp;LOLP attributable to a component’s
+          presence (avg LOLP without − with), top 8 by magnitude. Right of zero improves resilience.</div>
+      </section>
+      <section class="panel reveal col-6" id="pFtype">
+        <div class="panel-head"><span class="kicker">Failure-type severity</span></div>
+        <div class="panel-body"><div class="chart" id="chFtype"><div class="skeleton" style="height:240px"></div></div></div>
+        <div class="fig-caption"><span class="fig-no">FIG. 8</span>Mean energy not served per stressed run,
+          grouped by the type of failure injected.</div>
+      </section>
+
+      <section class="panel reveal col-6" id="pPaired">
+        <div class="panel-head"><span class="kicker">Baseline vs stressed, per config</span></div>
+        <div class="panel-body"><div class="chart" id="chPaired"><div class="skeleton" style="height:240px"></div></div></div>
+        <div class="fig-caption"><span class="fig-no">FIG. 9</span>Mean LOLP of each generated configuration
+          with no failures (baseline) and averaged over its M failure scenarios.</div>
+      </section>
+      <section class="panel reveal col-6" id="pHeat">
+        <div class="panel-head"><span class="kicker">Source × storage LOLP</span></div>
+        <div class="panel-body">
+          <div id="heatNote"></div>
+          <div class="chart" id="chHeat"><div class="skeleton" style="height:240px"></div></div>
+        </div>
+        <div class="fig-caption"><span class="fig-no">FIG. 10</span>Mean LOLP of stressed runs whose config
+          contains both the row source and column storage type. Hatched cells: no runs pair them.</div>
+      </section>
+    </div>
+
+    <p class="foot-note" style="margin:10px 2px 16px">LOLP/ENS scale with horizon — 30-day runs understate
+      annual values.</p>
+
+    <section class="panel reveal" id="tblPanel">
+      <div class="panel-head">
+        <span class="kicker">Run table</span>
+        <span id="bFilterBar" class="muted" style="font-size:11px"></span>
+      </div>
+      <div class="panel-body flush">
+        <div class="table-wrap">
+          <table class="data" id="bTable">
+            <thead></thead>
+            <tbody><tr><td class="muted" style="padding:18px 14px">loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="fig-caption"><span class="fig-no">TABLE 1</span>Every run in the batch — baselines carry
+        the “Baseline” scenario label. Click a column header to sort; click a histogram bin above to filter.</div>
+    </section>
+  </section>
+</main>
+<script type="module">
+  import { initNav } from "./js/nav.js";
+  initNav("resilience");
+  import("./js/pages/resilience.js").then(m => m.init());
+</script>
+</body>
+</html>

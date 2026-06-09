@@ -241,7 +241,10 @@ def _make_controllers(source_types: list[str], storage_types: list[str],
     needed.add("bidirectional")
 
     total_power = source_power + storage_power
-    for ctrl_type in needed:
+    # sorted: set iteration order varies with per-process hash randomization,
+    # and controller list order changes dispatch capacity-allocation order —
+    # generated configs must be reproducible across processes.
+    for ctrl_type in sorted(needed):
         if ctrl_type == "mppt":
             controllers.append(MPPTController(rated_kw=max(source_power, 1)))
         elif ctrl_type == "sic":
@@ -976,8 +979,13 @@ class ScenarioRunner:
         )
 
     def run(self, n_configs: int = 10, n_failures: int = 3,
-            include_baseline: bool = True) -> list[ScenarioRunResult]:
-        """Run N configs x M failure scenarios."""
+            include_baseline: bool = True,
+            progress_callback=None) -> list[ScenarioRunResult]:
+        """Run N configs x M failure scenarios.
+
+        progress_callback, if given, is called as f(done_runs, total_runs)
+        after each run; it has no effect on results.
+        """
         self.results = []
         configs = self.generator.generate_batch(n_configs)
         failure_rng = np.random.default_rng(self.seed + 1000)
@@ -992,6 +1000,8 @@ class ScenarioRunner:
                 self.results.append(result)
                 done += 1
                 print(f"\r  Progress: {done}/{total} runs", end="", flush=True)
+                if progress_callback is not None:
+                    progress_callback(done, total)
 
             # Failure scenario runs
             for fi in range(n_failures):
@@ -1002,6 +1012,8 @@ class ScenarioRunner:
                 self.results.append(result)
                 done += 1
                 print(f"\r  Progress: {done}/{total} runs", end="", flush=True)
+                if progress_callback is not None:
+                    progress_callback(done, total)
 
         print()
         return self.results

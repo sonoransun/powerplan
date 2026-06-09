@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PowerPlan — Dashboard</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/site.css">
+<script>const t=localStorage.getItem("pp-theme");if(t)document.documentElement.dataset.theme=t;</script>
+</head>
+<body>
+<main class="page">
+
+  <div class="page-title-row">
+    <h1>System dashboard</h1>
+    <span class="muted">ten pre-baked reference systems · 365-day hourly dispatch · nothing runs on this page</span>
+  </div>
+
+  <div class="kicker" style="margin:0 0 8px">PRESETS — SINGLE HOME → METROPOLITAN</div>
+  <div class="card-strip" id="preset-strip" role="listbox" aria-label="Preset systems">
+    <div class="skeleton" style="min-height:96px"></div>
+    <div class="skeleton" style="min-height:96px"></div>
+    <div class="skeleton" style="min-height:96px"></div>
+    <div class="skeleton" style="min-height:96px"></div>
+    <div class="skeleton" style="min-height:96px"></div>
+    <div class="skeleton" style="min-height:96px"></div>
+    <div class="skeleton" style="min-height:96px"></div>
+    <div class="skeleton" style="min-height:96px"></div>
+    <div class="skeleton" style="min-height:96px"></div>
+    <div class="skeleton" style="min-height:96px"></div>
+  </div>
+
+  <div id="config-summary" style="margin:8px 0 14px;font-size:13px">
+    <div class="skeleton" style="min-height:22px;max-width:560px"></div>
+  </div>
+
+  <div id="spec-callout"></div>
+
+  <div id="dashboard-root">
+    <div class="kpi-strip" style="margin-bottom:16px">
+      <div class="skeleton" style="min-height:86px"></div>
+      <div class="skeleton" style="min-height:86px"></div>
+      <div class="skeleton" style="min-height:86px"></div>
+      <div class="skeleton" style="min-height:86px"></div>
+      <div class="skeleton" style="min-height:86px"></div>
+      <div class="skeleton" style="min-height:86px"></div>
+      <div class="skeleton" style="min-height:86px"></div>
+    </div>
+    <div class="skeleton" style="min-height:380px;margin-bottom:16px"></div>
+    <div class="grid">
+      <div class="skeleton col-6" style="min-height:300px"></div>
+      <div class="skeleton col-6" style="min-height:300px"></div>
+    </div>
+  </div>
+
+  <noscript>
+    <div class="callout error" style="margin-top:20px">
+      This is an interactive appendix — it needs JavaScript to fetch the pre-baked
+      simulation data and draw the figures. The underlying numbers live in
+      <span class="mono">docs/data/</span>.
+    </div>
+  </noscript>
+
+  <footer class="muted" style="margin-top:32px;padding-top:12px;border-top:1px solid var(--hairline);font-size:12px">
+    All data pre-computed by <span class="mono">scripts/prebake.py</span> · engine
+    v<span class="mono" id="engine-version">—</span>
+  </footer>
+
+</main>
+<script type="module">
+  import { initNav } from "./js/nav.js";
+  initNav("index");
+  import("./js/pages/gallery.js").then((m) => m.init());
+</script>
+</body>
+</html>
